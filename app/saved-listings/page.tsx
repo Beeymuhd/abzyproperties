@@ -1,0 +1,246 @@
+'use client'
+
+import { useState } from 'react'
+import { Navbar } from '@/components/navbar'
+import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import Link from 'next/link'
+import { Heart, Filter, MapPin, Bed, Bath, Trash2 } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { toast } from 'sonner'
+
+interface SavedProperty {
+  id: number
+  title: string
+  location: string
+  price: number
+  image: string
+  beds: number
+  baths: number
+  size: string
+  type: 'residential' | 'commercial' | 'land'
+  savedDate: Date
+}
+
+const mockSavedListings: SavedProperty[] = [
+  {
+    id: 1,
+    title: 'Modern Duplex in Abuja',
+    location: 'Lekki, Abuja',
+    price: 45000000,
+    image: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    beds: 4,
+    baths: 3,
+    size: '5,000 sqft',
+    type: 'residential',
+    savedDate: new Date(Date.now() - 86400000),
+  },
+  {
+    id: 2,
+    title: 'Premium Office Space',
+    location: 'Victoria Island, Lagos',
+    price: 120000000,
+    image: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+    beds: 10,
+    baths: 8,
+    size: '15,000 sqft',
+    type: 'commercial',
+    savedDate: new Date(Date.now() - 172800000),
+  },
+  {
+    id: 4,
+    title: 'Luxury Apartment Complex',
+    location: 'Banana Island, Ikoyi',
+    price: 250000000,
+    image: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+    beds: 5,
+    baths: 4,
+    size: '8,500 sqft',
+    type: 'residential',
+    savedDate: new Date(Date.now() - 259200000),
+  },
+]
+
+export default function SavedListingsPage() {
+  const [listings, setListings] = useState(mockSavedListings)
+  const [sortBy, setSortBy] = useState('recent')
+  const [filterType, setFilterType] = useState('all')
+
+  const filtered = listings.filter(
+    (l) => filterType === 'all' || l.type === filterType
+  )
+
+  const sorted = [...filtered].sort((a, b) => {
+    switch (sortBy) {
+      case 'price-low':
+        return a.price - b.price
+      case 'price-high':
+        return b.price - a.price
+      case 'recent':
+        return b.savedDate.getTime() - a.savedDate.getTime()
+      default:
+        return 0
+    }
+  })
+
+  const handleRemove = (id: number) => {
+    setListings(listings.filter((l) => l.id !== id))
+    toast.success('Removed from saved listings')
+  }
+
+  const formatSavedDate = (date: Date) => {
+    const now = new Date()
+    const diff = now.getTime() - date.getTime()
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+
+    if (days === 0) return 'Today'
+    if (days === 1) return 'Yesterday'
+    if (days < 7) return `${days} days ago`
+    if (days < 30) return `${Math.floor(days / 7)} weeks ago`
+    return `${Math.floor(days / 30)} months ago`
+  }
+
+  return (
+    <>
+      <Navbar />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Header */}
+        <div className="space-y-6 mb-8">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold">Saved Listings</h1>
+            <p className="text-lg text-muted-foreground">
+              {listings.length} properties saved
+            </p>
+          </div>
+
+          {/* Filter and Sort */}
+          {listings.length > 0 && (
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="residential">Residential</SelectItem>
+                  <SelectItem value="commercial">Commercial</SelectItem>
+                  <SelectItem value="land">Land</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="recent">Recently Saved</SelectItem>
+                  <SelectItem value="price-low">Price: Low to High</SelectItem>
+                  <SelectItem value="price-high">Price: High to Low</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
+
+        {/* Listings */}
+        {sorted.length === 0 ? (
+          <Card className="p-12 text-center">
+            <Heart className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
+            <p className="text-muted-foreground mb-4 text-lg">
+              {listings.length === 0
+                ? 'No saved listings yet'
+                : 'No listings match your filters'}
+            </p>
+            {listings.length === 0 && (
+              <Link href="/properties">
+                <Button>Start Browsing Properties</Button>
+              </Link>
+            )}
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {sorted.map((property) => (
+              <Card
+                key={property.id}
+                className="overflow-hidden hover:shadow-lg transition-all group"
+              >
+                {/* Image */}
+                <div
+                  className="h-48 bg-gradient-to-br group-hover:scale-105 transition-transform duration-300 relative"
+                  style={{ backgroundImage: property.image }}
+                >
+                  <div className="absolute top-3 right-3">
+                    <Button
+                      size="icon"
+                      variant="secondary"
+                      className="backdrop-blur-sm"
+                      onClick={() => handleRemove(property.id)}
+                    >
+                      <Heart className="w-4 h-4 fill-current text-red-500" />
+                    </Button>
+                  </div>
+                  <div className="absolute bottom-3 left-3">
+                    <span className="bg-black/60 text-white text-xs px-2 py-1 rounded">
+                      Saved {formatSavedDate(property.savedDate)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="p-4 space-y-3">
+                  <div>
+                    <h3 className="font-bold text-sm line-clamp-2 text-balance mb-1">
+                      {property.title}
+                    </h3>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1 mb-2">
+                      <MapPin className="w-3 h-3" />
+                      {property.location}
+                    </p>
+                    <span className="inline-block bg-muted text-muted-foreground text-xs px-2 py-1 rounded">
+                      {property.type.charAt(0).toUpperCase() +
+                        property.type.slice(1)}
+                    </span>
+                  </div>
+
+                  {/* Details */}
+                  <div className="flex gap-3 text-xs text-muted-foreground py-2 border-y border-border">
+                    {property.beds > 0 && (
+                      <span className="flex items-center gap-1">
+                        <Bed className="w-3 h-3" />
+                        {property.beds}
+                      </span>
+                    )}
+                    {property.baths > 0 && (
+                      <span className="flex items-center gap-1">
+                        <Bath className="w-3 h-3" />
+                        {property.baths}
+                      </span>
+                    )}
+                    <span>{property.size}</span>
+                  </div>
+
+                  {/* Footer */}
+                  <div className="space-y-2">
+                    <p className="text-lg font-bold text-primary">
+                      ₦{property.price.toLocaleString()}
+                    </p>
+                    <Link href={`/properties/${property.id}`}>
+                      <Button className="w-full">View Details</Button>
+                    </Link>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  )
+}

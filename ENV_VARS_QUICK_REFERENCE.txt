@@ -1,0 +1,44 @@
+ENVIRONMENT VARIABLES - QUICK REFERENCE
+========================================
+
+ADD THESE TO v0 VARS SECTION:
+(Click the "Vars" button in the v0 sidebar)
+
+1. DB_HOST = localhost
+
+2. DB_USER = root
+
+3. DB_PASSWORD = [Your MySQL password - you set this when installing]
+
+4. DB_NAME = abzy_properties
+
+5. NEXT_PUBLIC_API_URL = http://localhost:3000
+
+6. BLOB_READ_WRITE_TOKEN = [Get from Vercel dashboard → Storage → Blob]
+
+
+WHAT EACH DOES:
+---------------
+DB_* = Tell the app where your MySQL database is
+NEXT_PUBLIC_API_URL = Where the app runs locally
+BLOB_READ_WRITE_TOKEN = Allows image uploads to work
+
+
+MYSQL PASSWORD EXAMPLE:
+-----------------------
+If you installed MySQL and were asked for a password:
+- You chose: "admin123" (or whatever you entered)
+- Put that exact value in: DB_PASSWORD = admin123
+
+
+VERCEL BLOB TOKEN:
+------------------
+If you don't have it yet:
+1. Go to vercel.com → Log in
+2. Click "Storage" at the top
+3. Click "Create" → Choose "Blob"
+4. Name: abzy-properties-blob
+5. Copy the token and paste into BLOB_READ_WRITE_TOKEN
+
+
+After filling all 6, refresh the v0 preview - error should be gone!

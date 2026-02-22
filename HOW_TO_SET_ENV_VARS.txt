@@ -1,0 +1,98 @@
+ENVIRONMENT VARIABLES SETUP GUIDE
+==================================
+
+The app is asking for environment variables in the Vars section of v0. Here's exactly what to provide:
+
+SECTION 1: MYSQL DATABASE
+==========================
+These variables tell the app how to connect to your MySQL database.
+
+DB_HOST
+-------
+Value: localhost
+(This is where your MySQL is running - "localhost" means your computer)
+
+DB_USER
+-------
+Value: root
+(This is your MySQL username - usually "root" by default)
+
+DB_PASSWORD
+-----------
+Value: [Enter the password you set when installing MySQL]
+Example: mysql123
+(This is YOUR MySQL password - only you know this)
+
+DB_NAME
+-------
+Value: abzy_properties
+(This is the database name we created - keep it as is)
+
+SECTION 2: APPLICATION URL
+===========================
+
+NEXT_PUBLIC_API_URL
+-------------------
+Value: http://localhost:3000
+(This is your local development URL - keep as is for now)
+
+SECTION 3: VERCEL BLOB (FOR FILE UPLOADS)
+==========================================
+
+BLOB_READ_WRITE_TOKEN
+---------------------
+This allows file uploads to work (images, CAC documents).
+
+TO GET THIS TOKEN:
+1. Go to: https://vercel.com/dashboard
+2. Click "Storage" tab (top menu)
+3. Click "Create Database" or "Connect"
+4. Select "Blob"
+5. Name it: "abzy-properties-blob"
+6. Click "Create"
+7. Copy the "Read/Write Token"
+8. Paste it here
+
+Value: [Paste the token you copied from Vercel]
+
+
+COMPLETE EXAMPLE
+================
+
+If your MySQL setup looks like:
+- Username: root
+- Password: mypassword123
+- Database: abzy_properties
+
+Then in v0 Vars section, add these exact values:
+
+DB_HOST = localhost
+DB_USER = root
+DB_PASSWORD = mypassword123
+DB_NAME = abzy_properties
+NEXT_PUBLIC_API_URL = http://localhost:3000
+BLOB_READ_WRITE_TOKEN = [token from Vercel Blob]
+
+
+AFTER ADDING VARS
+=================
+1. Click "Save" or refresh the preview
+2. The app should load without the red "Configure" banner
+3. You can then test login and other features
+
+
+TROUBLESHOOTING
+===============
+
+Q: Where do I find my MySQL password?
+A: You set this when installing MySQL. If you forgot it, you'll need to reset MySQL.
+
+Q: I don't have a Vercel account yet
+A: Create one at vercel.com (free, uses your GitHub account)
+
+Q: The app still shows "Configure"
+A: Make sure ALL 6 variables are filled in (all have values)
+
+Q: Do I need to change anything for production?
+A: Yes - when deploying to Vercel, these values will be different.
+   We'll handle that in the VERCEL_DEPLOYMENT.md guide.
