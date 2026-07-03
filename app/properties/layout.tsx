@@ -5,9 +5,7 @@ export const metadata: Metadata = {
   description:
     'Browse verified houses, apartments and lands for sale.',
 
-   verification: {
-    google: 'jlJp_AACqHBmCCX9DdSHcFL-q7rMttgwgAdbiZMgDro',
-  },
+ 
 }
 
 

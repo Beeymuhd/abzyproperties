@@ -12,11 +12,14 @@ export const metadata: Metadata = {
   title: 'Abzy Properties - Premium Real Estate in Abuja',
   description: 'Discover verified property listings in Abuja. Browse homes, offices, and land with real-time search, Google Maps integration, and instant communication tools. Your trusted partner for smart property investment.',
   generator: 'v0.app',
-  keywords: 'real estate, properties, Abuja, listings, land, homes, offices, verified properties',
+  keywords: 'real estate, properties, Abuja, listings, land, homes, verified properties',
   openGraph: {
     title: 'Abzy Properties - Premium Real Estate in Abuja',
     description: 'Discover verified property listings in Abuja with real-time search and instant communication.',
     type: 'website',
+  },
+    verification: {
+    google: 'jlJp_AACqHBmCCX9DdSHcFL-q7rMttgwgAdbiZMgDro',
   },
   icons: {
     icon: [
