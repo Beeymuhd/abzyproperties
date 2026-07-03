@@ -15,8 +15,8 @@ import type { Session } from '@/lib/types'
 
 export default function LoginPage() {
   const router = useRouter()
-  const [email, setEmail] = useState('admin@abzy.com')
-  const [password, setPassword] = useState('admin123')
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -27,7 +27,7 @@ export default function LoginPage() {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ username, password }),
       })
 
       if (!response.ok) {
@@ -65,29 +65,20 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* Demo Credentials */}
-          <div className="bg-accent/10 border border-accent/20 rounded-lg p-4 text-sm">
-            <p className="font-semibold text-accent mb-2">Demo Credentials:</p>
-            <p className="text-muted-foreground">
-              <strong>Admin:</strong> admin@abzy.com / admin123
-            </p>
-            <p className="text-muted-foreground">
-              <strong>User:</strong> demo@example.com / demo123
-            </p>
-          </div>
+        
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium">
-                Email Address
+              <Label htmlFor="username" className="text-sm font-medium">
+                Username
               </Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="username"
+                type="username"
+                placeholder="Name"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 required
                 className="bg-input/50 border-border/50 focus:border-primary transition"
               />
@@ -100,7 +91,7 @@ export default function LoginPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                placeholder="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required

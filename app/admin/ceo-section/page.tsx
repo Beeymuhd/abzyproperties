@@ -2,7 +2,7 @@
 
 import React from "react"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,48 +10,113 @@ import { Label } from '@/components/ui/label'
 import { Upload, Trash2, Save } from 'lucide-react'
 import { toast } from 'sonner'
 
-const mockCEOs = [
-  {
-    id: 1,
-    name: 'Ibrahim Shahid Ahmad',
-    position: 'CEO',
-    imageUrl: null,
-  },
-  {
-    id: 2,
-    name: 'Abubakar Abba Muhammad',
-    position: 'Co-CEO',
-    imageUrl: null,
-  },
-]
-
 export default function CEOSectionPage() {
-  const [ceos, setCEOs] = useState(mockCEOs)
+  const [ceos, setCEOs] = useState<any[]>([])
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editData, setEditData] = useState({ name: '', position: '' })
   const [cacImage, setCacImage] = useState<File | null>(null)
 
-  const handleEdit = (ceo: typeof ceos[0]) => {
-    setEditingId(ceo.id)
-    setEditData({ name: ceo.name, position: ceo.position })
-  }
+  const fetchCEOs = async () => {
+  try {
+    const response = await fetch('/api/ceo-info')
+    const data = await response.json()
 
-  const handleSave = (id: number) => {
-    if (!editData.name || !editData.position) {
-      toast.error('Please fill in all fields')
+    if (Array.isArray(data)) {
+      setCEOs(data)
+    }
+  } catch (error) {
+    console.error(error)
+    toast.error('Failed to load CEO information')
+  }
+ }
+
+ useEffect(() => {
+  fetchCEOs()
+ }, [])
+
+ const handleAddCEO = async () => {
+  try {
+    const response = await fetch('/api/ceo-info', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ceo_name: 'New CEO',
+        title: 'CEO',
+        bio: '',
+        image_url: null,
+        order_number: ceos.length + 1,
+      }),
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      toast.error(data.error || 'Failed to create CEO')
       return
     }
 
-    setCEOs(
-      ceos.map((c) =>
-        c.id === id
-          ? { ...c, name: editData.name, position: editData.position }
-          : c
-      )
-    )
-    setEditingId(null)
-    toast.success('CEO information updated')
+    await fetchCEOs()
+
+   const latestCEO = data
+
+   setEditingId(latestCEO.id)
+   setEditData({
+    name: latestCEO.ceo_name,
+   position: latestCEO.title,
+  })
+
+toast.success('CEO added successfully') 
+  } catch (error) {
+    console.error(error)
+    toast.error('Failed to create CEO')
   }
+}
+
+  const handleEdit = (ceo: typeof ceos[0]) => {
+    setEditingId(ceo.id)
+    setEditData({ name: ceo.ceo_name, position: ceo.title })
+  }
+
+ const handleSave = async (id: number) => {
+  if (!editData.name || !editData.position) {
+    toast.error('Please fill in all fields')
+    return
+  }
+
+  try {
+    const response = await fetch('/api/ceo-info', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+  id,
+  ceo_name: editData.name,
+  bio: ceos.find(c => c.id === id)?.bio || '',
+  title: editData.position,
+  image_url: ceos.find(c => c.id === id)?.image_url || null,
+  order_number: ceos.find(c => c.id === id)?.order_number || 1,
+}),
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      toast.error(data.error || 'Failed to update CEO')
+      return
+    }
+
+    await fetchCEOs()
+    setEditingId(null)
+
+    toast.success('CEO information updated')
+  } catch (error) {
+    console.error(error)
+    toast.error('Failed to update CEO')
+  }
+ }
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -65,19 +130,87 @@ export default function CEOSectionPage() {
     }
   }
 
-  const handleUploadCAC = () => {
-    if (!cacImage) {
-      toast.error('Please select an image first')
-      return
-    }
-    toast.success('CAC document uploaded successfully')
-    setCacImage(null)
+  const handleUploadCAC = async () => {
+    console.log('UPLOAD BUTTON CLICKED')
+  if (!cacImage) {
+    toast.error('Please select an image first')
+    return
   }
 
-  const handleDelete = (id: number) => {
-    setCEOs(ceos.filter((c) => c.id !== id))
-    toast.success('CEO removed')
+  try {
+    const formData = new FormData()
+    formData.append('file', cacImage)
+
+    console.log('SENDING TO /api/cac-upload')
+
+    const uploadResponse = await fetch('/api/cac-upload', {
+      method: 'POST',
+      body: formData,
+    })
+
+    console.log('UPLOAD RESPONSE:', uploadResponse.status)
+
+    const uploadData = await uploadResponse.json()
+
+    if (!uploadResponse.ok) {
+      toast.error(uploadData.error || 'Upload failed')
+      return
+    }
+
+    const saveResponse = await fetch('/api/cac-registration', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        cac_number: 'RC.8772955',
+        document_url: uploadData.url,
+      }),
+    })
+
+    const saveData = await saveResponse.json()
+    console.log('CAC SAVE RESPONSE:', saveData)
+    console.log('STATUS:', saveResponse.status)
+
+    if (!saveResponse.ok) {
+      toast.error(saveData.error || 'Failed to save CAC information')
+      return
+    }
+
+    toast.success('CAC document uploaded successfully')
+
+    setCacImage(null)
+  } catch (error) {
+    console.error(error)
+    toast.error('Upload failed')
   }
+}
+
+  const handleDelete = async (id: number) => {
+  try {
+    const response = await fetch('/api/ceo-info', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ id }),
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      toast.error(data.error || 'Failed to delete CEO')
+      return
+    }
+
+    await fetchCEOs()
+
+    toast.success('CEO removed')
+  } catch (error) {
+    console.error(error)
+    toast.error('Failed to delete CEO')
+  }
+ }
 
   return (
     <div className="flex-1 p-8 space-y-8">
@@ -122,21 +255,32 @@ export default function CEOSectionPage() {
             </label>
           </div>
 
-          {cacImage && (
-            <Button
-              onClick={handleUploadCAC}
-              className="w-full gap-2"
-            >
-              <Upload className="w-4 h-4" />
-              Upload CAC Document
-            </Button>
-          )}
+         {cacImage && (
+  <button
+    type="button"
+    onClick={() => {
+      console.log('BUTTON PRESSED')
+      handleUploadCAC()
+    }}
+    className="w-full p-3 border rounded"
+  >
+    Upload CAC Document
+  </button>
+)}
         </div>
       </Card>
 
       {/* CEOs Management */}
       <div className="space-y-4">
-        <h2 className="text-xl font-bold">CEO Information</h2>
+  <div className="flex items-center justify-between">
+    <h2 className="text-xl font-bold">CEO Information</h2>
+
+    <Button
+      onClick={handleAddCEO}
+    >
+      Add CEO
+    </Button>
+  </div>
 
         {ceos.map((ceo) => (
           <Card key={ceo.id} className="p-6">
@@ -185,9 +329,9 @@ export default function CEOSectionPage() {
               <div className="space-y-4">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className="text-lg font-bold">{ceo.name}</h3>
+                    <h3 className="text-lg font-bold">{ceo.ceo_name}</h3>
                     <p className="text-sm text-muted-foreground">
-                      {ceo.position}
+                      {ceo.title}
                     </p>
                   </div>
                   <div className="flex gap-2">
@@ -208,11 +352,11 @@ export default function CEOSectionPage() {
                   </div>
                 </div>
 
-                {ceo.imageUrl && (
+                {ceo.image_url && (
                   <div className="relative w-32 h-32 rounded-lg overflow-hidden bg-muted">
                     <img
-                      src={ceo.imageUrl || "/placeholder.svg"}
-                      alt={ceo.name}
+                      src={ceo.image_url || "/placeholder.svg"}
+                      alt={ceo.ceo_name}
                       className="w-full h-full object-cover"
                     />
                   </div>

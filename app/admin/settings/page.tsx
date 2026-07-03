@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,8 +13,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Bell, Lock, Globe, Users, Save } from 'lucide-react'
+import { Lock, Globe, Save } from 'lucide-react'
 import { toast } from 'sonner'
+
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState({
@@ -25,17 +26,152 @@ export default function SettingsPage() {
     timezone: 'Africa/Lagos',
     currency: 'NGN',
     description: 'Leading real estate platform in Nigeria',
-    notificationsEnabled: true,
-    emailAlerts: true,
+    instagramUrl: '',
+    whatsappUrl: '',
+    tiktokUrl: '',
   })
+
+  const [currentUsername, setCurrentUsername] =
+  useState('')
+
+  const [newUsername, setNewUsername] =
+  useState('')
+
+  const [showPassword, setShowPassword] = useState(false)
+
+  const [currentPassword, setCurrentPassword] =
+  useState('')
+
+const [newPassword, setNewPassword] =
+  useState('')
+
+const [confirmPassword, setConfirmPassword] =
+  useState('')
+
+  const handleUsernameChange = async () => {
+  try {
+    const response = await fetch(
+      '/api/auth/change-username',
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          currentUsername,
+          newUsername,
+        }),
+      }
+    )
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.error)
+    }
+
+    toast.success('Username updated successfully')
+
+    setCurrentUsername('')
+    setNewUsername('')
+  } catch (error: any) {
+    toast.error(error.message)
+  }
+}
+
+  const handlePasswordChange = async () => {
+  if (newPassword !== confirmPassword) {
+    toast.error('Passwords do not match')
+    return
+  }
+
+  try {
+    const response = await fetch(
+      '/api/auth/change-password',
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+        }),
+      }
+    )
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.error)
+    }
+
+    toast.success('Password changed successfully')
+
+    window.location.href = '/auth/login'
+
+    setCurrentPassword('')
+    setNewPassword('')
+    setConfirmPassword('')
+  } catch (error: any) {
+    toast.error(error.message)
+  }
+}
+
+   const fetchSettings = async () => {
+    try {
+      const response = await fetch('/api/settings')
+      const data = await response.json()
+
+      setSettings({
+        companyName: data.company_name || '',
+        email: data.email || '',
+        phone: data.phone || '',
+        address: data.address || '',
+        description: data.description || '',
+        timezone: data.timezone || 'Africa/Lagos',
+        currency: data.currency || 'NGN',
+        instagramUrl: data.instagram_url || '',
+        whatsappUrl: data.whatsapp_url || '',
+        tiktokUrl: data.tiktok_url || '',
+      })
+    } catch (error) {
+      console.error(error)
+      toast.error('Failed to load settings')
+    }
+  }
+
+  // ADD useEffect HERE
+  useEffect(() => {
+    fetchSettings()
+  }, [])
 
   const handleChange = (field: string, value: unknown) => {
     setSettings({ ...settings, [field]: value })
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
+  try {
+    const response = await fetch('/api/settings', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(settings),
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.error)
+    }
+
     toast.success('Settings updated successfully')
+  } catch (error) {
+    console.error(error)
+    toast.error('Failed to save settings')
   }
+}
 
   return (
     <div className="flex-1 p-8 space-y-8">
@@ -104,6 +240,51 @@ export default function SettingsPage() {
         </div>
       </Card>
 
+      {/* Social Media */}
+<Card className="p-6 space-y-6">
+  <div className="pb-4 border-b border-border">
+    <h2 className="text-xl font-bold">Social Media</h2>
+  </div>
+
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+    <div className="space-y-2">
+      <Label>Instagram</Label>
+      <Input
+        value={settings.instagramUrl}
+        onChange={(e) =>
+          handleChange('instagramUrl', e.target.value)
+        }
+        placeholder="https://instagram.com/abzy_properties"
+      />
+    </div>
+
+    <div className="space-y-2">
+      <Label>WhatsApp</Label>
+      <Input
+        value={settings.whatsappUrl}
+        onChange={(e) =>
+          handleChange('whatsappUrl', e.target.value)
+        }
+        placeholder="https://wa.me/234706182854"
+      />
+    </div>
+
+    <div className="space-y-2">
+      <Label>TikTok</Label>
+      <Input
+        value={settings.tiktokUrl}
+        onChange={(e) =>
+          handleChange('tiktokUrl', e.target.value)
+        }
+        placeholder="https://tiktok.com/@abzy_properties"
+      />
+    </div>
+
+  </div>
+</Card>
+
+
       {/* Localization */}
       <Card className="p-6 space-y-6">
         <div className="flex items-center gap-2 pb-4 border-b border-border">
@@ -152,67 +333,78 @@ export default function SettingsPage() {
         </div>
       </Card>
 
-      {/* Notifications */}
-      <Card className="p-6 space-y-6">
-        <div className="flex items-center gap-2 pb-4 border-b border-border">
-          <Bell className="w-5 h-5 text-primary" />
-          <h2 className="text-xl font-bold">Notifications</h2>
-        </div>
-
-        <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-            <div>
-              <p className="font-medium">System Notifications</p>
-              <p className="text-sm text-muted-foreground">
-                Receive alerts about new inquiries and properties
-              </p>
-            </div>
-            <input
-              type="checkbox"
-              checked={settings.notificationsEnabled}
-              onChange={(e) =>
-                handleChange('notificationsEnabled', e.target.checked)
-              }
-              className="w-5 h-5 cursor-pointer"
-            />
-          </div>
-
-          <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-            <div>
-              <p className="font-medium">Email Alerts</p>
-              <p className="text-sm text-muted-foreground">
-                Get email notifications for important events
-              </p>
-            </div>
-            <input
-              type="checkbox"
-              checked={settings.emailAlerts}
-              onChange={(e) => handleChange('emailAlerts', e.target.checked)}
-              className="w-5 h-5 cursor-pointer"
-            />
-          </div>
-        </div>
-      </Card>
-
       {/* Security */}
       <Card className="p-6 space-y-6">
-        <div className="flex items-center gap-2 pb-4 border-b border-border">
-          <Lock className="w-5 h-5 text-primary" />
-          <h2 className="text-xl font-bold">Security</h2>
-        </div>
+  <h2 className="text-xl font-bold">Security</h2>
 
-        <div className="space-y-4">
-          <Button variant="outline" className="w-full justify-start bg-transparent">
-            Change Admin Password
-          </Button>
-          <Button variant="outline" className="w-full justify-start bg-transparent">
-            View Login History
-          </Button>
-          <Button variant="outline" className="w-full justify-start bg-transparent">
-            Manage API Keys
-          </Button>
-        </div>
-      </Card>
+  <div className="space-y-3">
+
+  <div className="space-y-3 border-b pb-6">
+
+  <h3 className="font-semibold">
+    Change Username
+  </h3>
+
+  <Input
+    placeholder="Current Username"
+    value={currentUsername}
+    onChange={(e) =>
+      setCurrentUsername(e.target.value)
+    }
+  />
+
+  <Input
+    placeholder="New Username"
+    value={newUsername}
+    onChange={(e) =>
+      setNewUsername(e.target.value)
+    }
+  />
+
+  <Button
+    type="button"
+    onClick={handleUsernameChange}
+  >
+    Change Username
+  </Button>
+
+</div>
+
+  <Input
+  type={showPassword ? 'text' : 'password'}
+  placeholder="Current Password"
+  value={currentPassword}
+  onChange={(e) => setCurrentPassword(e.target.value)} />
+
+  <Input
+  type={showPassword ? 'text' : 'password'}
+  placeholder="New Password"
+  value={newPassword}
+  onChange={(e) => setNewPassword(e.target.value)} />
+
+ <Input
+  type={showPassword ? 'text' : 'password'}
+  placeholder="Confirm Password"
+  value={confirmPassword}
+  onChange={(e) => setConfirmPassword(e.target.value)} />
+
+  <Button
+  type="button"
+  variant="outline"
+  onClick={() => setShowPassword(!showPassword)}
+>
+  {showPassword ? 'Hide Passwords' : 'Show Passwords'}
+</Button>
+
+  <Button
+    onClick={handlePasswordChange}
+    className="w-full"
+  >
+    Change Password
+  </Button>
+
+</div>
+</Card>
 
       {/* Save Button */}
       <div className="flex gap-2">

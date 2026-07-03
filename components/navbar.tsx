@@ -37,9 +37,6 @@ export function Navbar() {
             href="/"
             className="flex items-center space-x-2 font-bold text-xl text-primary"
           >
-            <div className="w-8 h-8 bg-primary rounded flex items-center justify-center text-white text-sm">
-              A
-            </div>
             <span>Abzy Properties</span>
           </Link>
 

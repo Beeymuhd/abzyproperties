@@ -1,80 +1,55 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { query, queryOne } from '@/lib/db';
-import { hashPassword } from '@/lib/password';
-import { generateSessionToken } from '@/lib/auth';
+import { supabaseAdmin } from '@/lib/supabase-admin'
+import { NextRequest, NextResponse } from 'next/server'
+import bcrypt from 'bcryptjs'
 
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const { email, password, name, phone } = await request.json();
+    const { name, username, email, password } = await req.json()
 
-    if (!email || !password || !name) {
-      return NextResponse.json(
-        { error: 'Email, password, and name are required' },
-        { status: 400 }
-      );
-    }
-
-    // Check if user already exists
-    const existingUser = await queryOne(
-      'SELECT id FROM users WHERE email = ?',
-      [email]
-    );
+    // Check if username exists
+    const { data: existingUser } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('username', username)
+      .single()
 
     if (existingUser) {
-      return NextResponse.json(
-        { error: 'Email already registered' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'username already registered' }, { status: 400 })
     }
 
     // Hash password
-    const passwordHash = await hashPassword(password);
+    const password_hash = bcrypt.hashSync(password, 10)
 
-    // Create user
-    const result = await query(
-      'INSERT INTO users (email, password_hash, name, phone, role) VALUES (?, ?, ?, ?, ?)',
-      [email, passwordHash, name, phone || null, 'user']
-    ) as any;
+    // Insert new user
+    const { data, error } = await supabaseAdmin
+      .from('users')
+      .insert([{ name, username, email, password_hash }])
+      .select()
+      .single()
 
-    const userId = result.insertId;
+    if (error || !data) {
+      console.error(error)
+      return NextResponse.json({ error: 'Signup failed' }, { status: 500 })
+    }
 
-    // Generate session
-    const sessionToken = generateSessionToken();
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    // Return session object
+   const session = {
+  user_id: data.id,
+  username: data.username,
+  name: data.name,
+  email: data.email,
+  role: data.role,
 
-    // Store session in database
-    await query(
-      'INSERT INTO sessions (user_id, token, expires_at) VALUES (?, ?, ?)',
-      [userId, sessionToken, expiresAt]
-    );
+  created_at: new Date().toISOString(),
 
-    const session = {
-      user_id: userId,
-      email: email,
-      name: name,
-      role: 'user',
-      created_at: new Date(),
-      expires_at: expiresAt,
-    };
+  expires_at: new Date(
+    Date.now() + 1000 * 60 * 60 * 24 * 7
+  ).toISOString(),
+}
 
-    const response = NextResponse.json(session, { status: 201 });
-
-    // Set HTTP-only cookie
-    response.cookies.set({
-      name: 'abzy_session_token',
-      value: sessionToken,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60,
-    });
-
-    return response;
-  } catch (error) {
-    console.error('[v0] Signup error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json(session)
+  } catch (err) {
+    console.error(err)
+    return NextResponse.json({ error: 'Server error' }, { status: 500 })
   }
 }

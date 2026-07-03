@@ -292,4 +292,4 @@ Copyright © 2024 Abzy Properties. All rights reserved.
 
 **Last Updated**: February 2024
 **Status**: Production Ready
-**Team**: Ibrahim Shahid Ahmad, Abubakar Abba Muhammad
+**Team**: Ibrahim Shahid Ahmad, Abubakar Abba Habib

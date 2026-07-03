@@ -1,101 +1,126 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { query, queryOne } from '@/lib/db';
-
-export async function GET(request: NextRequest) {
+import { NextRequest, NextResponse } from 'next/server'
+import { supabaseAdmin } from '@/lib/supabase-admin'
+// GET CAC INFO
+export async function GET() {
   try {
-    const cacInfo = await queryOne(
-      'SELECT * FROM cac_registration ORDER BY created_at DESC LIMIT 1'
-    );
+    const { data, error } = await supabaseAdmin
+      .from('cac_registration')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
 
-    return NextResponse.json(cacInfo || {}, { status: 200 });
+    if (error && error.code !== 'PGRST116') {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json(data || {})
   } catch (error) {
-    console.error('[v0] Get CAC info error:', error);
+    console.error(error)
+
     return NextResponse.json(
       { error: 'Failed to fetch CAC information' },
       { status: 500 }
-    );
+    )
   }
 }
 
+// CREATE OR UPDATE CAC INFO
 export async function POST(request: NextRequest) {
   try {
-    const { cac_number, document_url } = await request.json();
+    const { cac_number, document_url } = await request.json()
 
-    if (!cac_number || !document_url) {
-      return NextResponse.json(
-        { error: 'CAC number and document URL are required' },
-        { status: 400 }
-      );
-    }
-
-    // Check if CAC already exists
-    const existing = await queryOne(
-      'SELECT id FROM cac_registration WHERE cac_number = ?',
-      [cac_number]
-    );
+    const { data: existing } = await supabaseAdmin
+      .from('cac_registration')
+      .select('id')
+      .eq('cac_number', cac_number)
+      .maybeSingle()
 
     if (existing) {
-      // Update existing
-      const result = await query(
-        `UPDATE cac_registration SET document_url = ? WHERE cac_number = ?`,
-        [document_url, cac_number]
-      ) as any;
+      const { error } = await supabaseAdmin
+        .from('cac_registration')
+        .update({
+  document_url,
+  verified: true,
+  updated_at: new Date().toISOString(),
+})
+        .eq('id', existing.id)
 
-      return NextResponse.json(
-        { message: 'CAC information updated successfully' },
-        { status: 200 }
-      );
-    } else {
-      // Insert new
-      const result = await query(
-        `INSERT INTO cac_registration (cac_number, document_url, verified)
-         VALUES (?, ?, FALSE)`,
-        [cac_number, document_url]
-      ) as any;
+      if (error) {
+        return NextResponse.json(
+          { error: error.message },
+          { status: 500 }
+        )
+      }
 
-      return NextResponse.json(
-        { id: result.insertId, message: 'CAC information registered successfully' },
-        { status: 201 }
-      );
+      return NextResponse.json({
+        message: 'CAC information updated successfully',
+      })
     }
+
+    const { data, error } = await supabaseAdmin
+      .from('cac_registration')
+      .insert([
+  {
+    cac_number,
+    document_url,
+    verified: true,
+  },
+])
+      .select()
+
+    if (error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json(data[0], {
+      status: 201,
+    })
   } catch (error) {
-    console.error('[v0] Create CAC info error:', error);
+    console.error(error)
+
     return NextResponse.json(
       { error: 'Failed to register CAC information' },
       { status: 500 }
-    );
+    )
   }
 }
 
+// VERIFY CAC
 export async function PUT(request: NextRequest) {
   try {
-    const { id, verified } = await request.json();
+    const { id, verified } = await request.json()
 
-    if (!id) {
+    const { error } = await supabaseAdmin
+      .from('cac_registration')
+      .update({
+        verified,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+
+    if (error) {
       return NextResponse.json(
-        { error: 'CAC ID required' },
-        { status: 400 }
-      );
+        { error: error.message },
+        { status: 500 }
+      )
     }
 
-    const result = await query(
-      `UPDATE cac_registration SET verified = ? WHERE id = ?`,
-      [verified, id]
-    ) as any;
-
-    if (result.affectedRows === 0) {
-      return NextResponse.json(
-        { error: 'CAC information not found' },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({ message: 'CAC verification status updated successfully' }, { status: 200 });
+    return NextResponse.json({
+      message: 'CAC verification updated successfully',
+    })
   } catch (error) {
-    console.error('[v0] Update CAC info error:', error);
+    console.error(error)
+
     return NextResponse.json(
       { error: 'Failed to update CAC information' },
       { status: 500 }
-    );
+    )
   }
 }

@@ -1,100 +1,168 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { query, queryOne } from '@/lib/db';
-
-export async function GET(
-  request: NextRequest,
+import { NextResponse } from 'next/server'
+import { supabaseAdmin } from '@/lib/supabase-admin'
+export async function DELETE(
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    
-    const property = await queryOne(
-      'SELECT * FROM properties WHERE id = ?',
-      [id]
-    );
+    const { id } = await params
 
-    if (!property) {
+    const { error } = await supabaseAdmin
+      .from('properties')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
       return NextResponse.json(
-        { error: 'Property not found' },
-        { status: 404 }
-      );
+        { error: error.message },
+        { status: 500 }
+      )
     }
 
-    // Get property images
-    const images = await query(
-      'SELECT * FROM property_images WHERE property_id = ? ORDER BY display_order',
-      [id]
-    );
-
-    return NextResponse.json({ ...property, images }, { status: 200 });
+    return NextResponse.json({
+      success: true,
+      message: 'Property deleted successfully',
+    })
   } catch (error) {
-    console.error('[v0] Get property error:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch property' },
+      { error: 'Failed to delete property' },
       { status: 500 }
-    );
+    )
   }
 }
 
 export async function PUT(
-  request: NextRequest,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
-    const { title, description, type, location, price, bedrooms, bathrooms, area_sqft, verified, agent_name, agent_phone, agent_email, image_url, amenities } = await request.json();
+    const { id } = await params
+    const formData = await request.formData()
+    
+    const title = formData.get('title') as string
+const description = formData.get('description') as string
+const propertyType = formData.get('propertyType') as string
+const price = Number(formData.get('price'))
+const state = formData.get('state') as string
+const city = formData.get('city') as string
+const address = formData.get('address') as string
+const areaSqft = Number(formData.get('areaSqft')) || 0
+const landSize = Number(formData.get('landSize')) || 0
+const amenities = JSON.parse(
+  (formData.get('amenities') as string) || '[]')
+  const status = formData.get('status') as string
 
-    const result = await query(
-      `UPDATE properties SET 
-        title = ?, description = ?, type = ?, location = ?, price = ?, 
-        bedrooms = ?, bathrooms = ?, area_sqft = ?, verified = ?,
-        agent_name = ?, agent_phone = ?, agent_email = ?, image_url = ?, amenities = ?
-       WHERE id = ?`,
-      [title, description, type, location, price, bedrooms, bathrooms, area_sqft, verified, agent_name, agent_phone, agent_email, image_url, amenities ? JSON.stringify(amenities) : null, id]
-    ) as any;
+    const { data, error } = await supabaseAdmin
+      .from('properties')
+      .update({
+        title,
+        description,
+        type: propertyType,
+        location: `${address}, ${city}`,
+        price,
+        state,
+        city,
+        address,
+        area_sqft: areaSqft,
+        land_size: landSize,
+        amenities,
+        status,
+      })
+      .eq('id', id)
+      .select()
+      .single()
 
-    if (result.affectedRows === 0) {
+    if (error) {
       return NextResponse.json(
-        { error: 'Property not found' },
-        { status: 404 }
-      );
+        { error: error.message },
+        { status: 500 }
+      )
     }
 
-    return NextResponse.json({ message: 'Property updated successfully' }, { status: 200 });
+    return NextResponse.json(data)
   } catch (error) {
-    console.error('[v0] Update property error:', error);
     return NextResponse.json(
       { error: 'Failed to update property' },
       { status: 500 }
-    );
+    )
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: Request) {
   try {
-    const { id } = await params;
+    const formData = await request.formData()
 
-    const result = await query(
-      'DELETE FROM properties WHERE id = ?',
-      [id]
-    ) as any;
+    const title = formData.get('title') as string
+    const description = formData.get('description') as string
+    const propertyType = formData.get('propertyType') as string
+    const price = Number(formData.get('price'))
+    const state = formData.get('state') as string
+    const city = formData.get('city') as string
+    const address = formData.get('address') as string
+    const landSize = Number(formData.get('landSize'))
+    const status = formData.get('status') as string
+    const amenities = JSON.parse((formData.get('amenities') as string) || '[]')
 
-    if (result.affectedRows === 0) {
-      return NextResponse.json(
-        { error: 'Property not found' },
-        { status: 404 }
-      );
+    const file = formData.get('image') as File | null
+
+    let imageUrl = null
+
+    if (file) {
+      const fileName = `${Date.now()}-${file.name}`
+
+      const { error: uploadError } = await supabaseAdmin.storage
+        .from('property-images')
+        .upload(fileName, file)
+
+      if (uploadError) {
+        throw uploadError
+      }
+
+      const { data } = supabaseAdmin.storage
+        .from('property-images')
+        .getPublicUrl(fileName)
+
+      imageUrl = data.publicUrl
     }
 
-    return NextResponse.json({ message: 'Property deleted successfully' }, { status: 200 });
-  } catch (error) {
-    console.error('[v0] Delete property error:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete property' },
+    const location = `${address}, ${city}`
+
+    const { data, error } = await supabaseAdmin
+      .from('properties')
+      .insert([
+        {
+          title,
+          description,
+          type: propertyType,
+          property_type: propertyType,
+          price,
+          state,
+          city,
+          address,
+          location,
+          land_size: landSize,
+          amenities,
+          image_url: imageUrl,
+          status,
+          verified: false,
+        },
+      ])
+      .select()
+      .single()
+
+    if (error) {
+      return Response.json(
+        { error: error.message },
+        { status: 500 }
+      )
+    }
+
+    return Response.json(data)
+  } catch (error: any) {
+    return Response.json(
+      { error: error.message },
       { status: 500 }
-    );
+    )
   }
 }
+

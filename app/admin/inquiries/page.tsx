@@ -1,57 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { MessageCircle, Phone, Mail, CheckCircle, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 
-const mockInquiries = [
-  {
-    id: 1,
-    property: 'Modern Duplex in Abuja',
-    name: 'Chioma Obi',
-    contact: 'chioma@example.com',
-    method: 'email',
-    message: 'Interested in viewing the property this weekend',
-    status: 'pending',
-    date: '2 hours ago',
-  },
-  {
-    id: 2,
-    property: 'Premium Office Space',
-    name: 'Ibrahim Abubakar',
-    contact: '+234 801 234 5678',
-    method: 'whatsapp',
-    message: 'What is the available floor space?',
-    status: 'pending',
-    date: '4 hours ago',
-  },
-  {
-    id: 3,
-    property: 'Residential Land Plot',
-    name: 'Fiona Adeleke',
-    contact: '+234 901 987 6543',
-    method: 'call',
-    message: 'Can we schedule an inspection?',
-    status: 'responded',
-    date: '1 day ago',
-  },
-  {
-    id: 4,
-    property: 'Luxury Apartment Complex',
-    name: 'Ahmed Hassan',
-    contact: 'ahmed.h@business.com',
-    method: 'email',
-    message: 'Requesting financing options',
-    status: 'responded',
-    date: '2 days ago',
-  },
-]
 
 export default function InquiriesPage() {
-  const [inquiries, setInquiries] = useState(mockInquiries)
+  const [inquiries, setInquiries] = useState<any[]>([])
   const [filter, setFilter] = useState('all')
 
   const filteredInquiries =
@@ -59,17 +17,54 @@ export default function InquiriesPage() {
       ? inquiries
       : inquiries.filter((i) => i.status === filter)
 
-  const handleMarkResponded = (id: number) => {
-    setInquiries(
-      inquiries.map((i) => (i.id === id ? { ...i, status: 'responded' } : i))
-    )
-    toast.success('Inquiry marked as responded')
-  }
+  const handleMarkResponded = async (id: number) => {
+  try {
+    const response = await fetch('/api/inquiries', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        id,
+        status: 'responded',
+      }),
+    })
 
-  const handleDelete = (id: number) => {
-    setInquiries(inquiries.filter((i) => i.id !== id))
-    toast.success('Inquiry deleted')
+    if (!response.ok) {
+      throw new Error('Failed to update inquiry')
+    }
+
+    await fetchInquiries()
+
+    toast.success('Inquiry marked as responded')
+  } catch (error) {
+    console.error(error)
+    toast.error('Failed to update inquiry')
   }
+}
+
+  const handleDelete = async (id: number) => {
+  try {
+    const response = await fetch('/api/inquiries', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ id }),
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to delete inquiry')
+    }
+
+    await fetchInquiries()
+
+    toast.success('Inquiry deleted')
+  } catch (error) {
+    console.error(error)
+    toast.error('Failed to delete inquiry')
+  }
+}
 
   const getMethodIcon = (method: string) => {
     switch (method) {
@@ -83,6 +78,53 @@ export default function InquiriesPage() {
         return null
     }
   }
+
+  const handleContactCustomer = (inquiry: any) => {
+  console.log(inquiry)
+
+  if (inquiry.method === 'email') {
+  window.open(
+    `https://mail.google.com/mail/?view=cm&to=${inquiry.contact}`,
+    '_blank'
+  )
+  return
+}
+if (inquiry.method === 'email') {
+  window.location.href = `mailto:${inquiry.contact}`
+  return
+}
+
+  if (inquiry.method === 'whatsapp') {
+    window.open(
+      `https://wa.me/${inquiry.contact.replace(/\D/g, '')}`,
+      '_blank'
+    )
+  }
+
+  if (inquiry.method === 'call') {
+    window.location.href = `tel:${inquiry.contact}`
+  }
+}
+
+  const fetchInquiries = async () => {
+   try {
+     const response = await fetch('/api/inquiries')
+     const data = await response.json()
+
+     console.log('INQUIRIES RESPONSE:', data)
+     console.log('IS ARRAY:', Array.isArray(data))
+
+     setInquiries(Array.isArray(data) ? data : [])
+   }  catch (error) {
+     console.error(error)
+   }
+  }
+
+  useEffect(() => {
+  fetchInquiries()
+  }, [])
+
+  
 
   return (
     <div className="flex-1 p-8 space-y-8">
@@ -188,7 +230,10 @@ export default function InquiriesPage() {
                       Mark as Responded
                     </Button>
                   )}
-                  <Button variant="outline">Contact Customer</Button>
+                  <Button
+                  variant="outline" onClick={() => handleContactCustomer(inquiry)}>
+                   Contact Customer
+                  </Button>
                   <Button
                     variant="ghost"
                     onClick={() => handleDelete(inquiry.id)}

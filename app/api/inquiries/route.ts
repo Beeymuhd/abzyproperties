@@ -1,124 +1,132 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query, queryOne } from '@/lib/db';
-
-export async function GET(request: NextRequest) {
+import { supabaseAdmin } from '@/lib/supabase-admin'
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
+    const { data, error } = await supabaseAdmin
+      .from('inquiries')
+      .select('*')
+      .order('created_at', { ascending: false })
 
-    let sql = 'SELECT * FROM inquiries WHERE 1=1';
-    const params: any[] = [];
-
-    if (status && status !== 'all') {
-      sql += ' AND status = ?';
-      params.push(status);
+    if (error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      )
     }
 
-    sql += ' ORDER BY created_at DESC LIMIT 100';
-
-    const inquiries = await query(sql, params);
-    return NextResponse.json(inquiries, { status: 200 });
+    return NextResponse.json(data)
   } catch (error) {
-    console.error('[v0] Get inquiries error:', error);
+    console.error(error)
+
     return NextResponse.json(
       { error: 'Failed to fetch inquiries' },
       { status: 500 }
-    );
+    )
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { user_id, property_id, name, email, phone, message } = await request.json();
+    const {
+      user_id,
+      property_id,
+      property_title,
+      name,
+      contact,
+      method,
+      message,
+    } = await request.json()
 
-    if (!property_id || !name || !email || !phone) {
+    const { data, error } = await supabaseAdmin
+      .from('inquiries')
+      .insert([
+        {
+          user_id,
+          property_id,
+          property_title,
+          name,
+          contact,
+          method,
+          message,
+          status: 'pending',
+        },
+      ])
+      .select()
+
+    if (error) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
+        { error: error.message },
+        { status: 500 }
+      )
     }
 
-    const result = await query(
-      `INSERT INTO inquiries (user_id, property_id, name, email, phone, message, status)
-       VALUES (?, ?, ?, ?, ?, ?, 'new')`,
-      [user_id || null, property_id, name, email, phone, message || null]
-    ) as any;
-
-    return NextResponse.json(
-      { id: result.insertId, message: 'Inquiry created successfully' },
-      { status: 201 }
-    );
+    return NextResponse.json(data[0], {
+      status: 201,
+    })
   } catch (error) {
-    console.error('[v0] Create inquiry error:', error);
+    console.error(error)
+
     return NextResponse.json(
       { error: 'Failed to create inquiry' },
       { status: 500 }
-    );
+    )
   }
 }
 
 export async function PUT(request: NextRequest) {
   try {
-    const { id, status } = await request.json();
+    const { id, status } = await request.json()
 
-    if (!id || !status) {
+    const { error } = await supabaseAdmin
+      .from('inquiries')
+      .update({ status })
+      .eq('id', id)
+
+    if (error) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
+        { error: error.message },
+        { status: 500 }
+      )
     }
 
-    const result = await query(
-      'UPDATE inquiries SET status = ? WHERE id = ?',
-      [status, id]
-    ) as any;
-
-    if (result.affectedRows === 0) {
-      return NextResponse.json(
-        { error: 'Inquiry not found' },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({ message: 'Inquiry updated successfully' }, { status: 200 });
+    return NextResponse.json({
+      message: 'Inquiry updated successfully',
+    })
   } catch (error) {
-    console.error('[v0] Update inquiry error:', error);
+    console.error(error)
+
     return NextResponse.json(
       { error: 'Failed to update inquiry' },
       { status: 500 }
-    );
+    )
   }
 }
 
 export async function DELETE(request: NextRequest) {
   try {
-    const { id } = await request.json();
+    const { id } = await request.json()
 
-    if (!id) {
+    const { error } = await supabaseAdmin
+      .from('inquiries')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
       return NextResponse.json(
-        { error: 'Inquiry ID required' },
-        { status: 400 }
-      );
+        { error: error.message },
+        { status: 500 }
+      )
     }
 
-    const result = await query(
-      'DELETE FROM inquiries WHERE id = ?',
-      [id]
-    ) as any;
-
-    if (result.affectedRows === 0) {
-      return NextResponse.json(
-        { error: 'Inquiry not found' },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({ message: 'Inquiry deleted successfully' }, { status: 200 });
+    return NextResponse.json({
+      message: 'Inquiry deleted successfully',
+    })
   } catch (error) {
-    console.error('[v0] Delete inquiry error:', error);
+    console.error(error)
+
     return NextResponse.json(
       { error: 'Failed to delete inquiry' },
       { status: 500 }
-    );
+    )
   }
 }

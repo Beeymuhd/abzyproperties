@@ -1,83 +1,145 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/db';
-
+import { NextRequest, NextResponse } from 'next/server'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const type = searchParams.get('type');
-    const location = searchParams.get('location');
-    const minPrice = searchParams.get('minPrice');
-    const maxPrice = searchParams.get('maxPrice');
-    const search = searchParams.get('search');
+    const { data, error } = await supabaseAdmin
+      .from('properties')
+      .select('*')
+      .order('created_at', { ascending: false })
 
-    let sql = 'SELECT * FROM properties WHERE 1=1';
-    const params: any[] = [];
-
-    if (type && type !== 'all') {
-      sql += ' AND type = ?';
-      params.push(type);
+    if (error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      )
     }
 
-    if (location) {
-      sql += ' AND location LIKE ?';
-      params.push(`%${location}%`);
-    }
-
-    if (minPrice) {
-      sql += ' AND price >= ?';
-      params.push(parseFloat(minPrice));
-    }
-
-    if (maxPrice) {
-      sql += ' AND price <= ?';
-      params.push(parseFloat(maxPrice));
-    }
-
-    if (search) {
-      sql += ' AND (title LIKE ? OR description LIKE ?)';
-      params.push(`%${search}%`, `%${search}%`);
-    }
-
-    sql += ' ORDER BY created_at DESC LIMIT 100';
-
-    const properties = await query(sql, params);
-
-    return NextResponse.json(properties, { status: 200 });
+    return NextResponse.json(data)
   } catch (error) {
-    console.error('[v0] Get properties error:', error);
+    console.error(error)
+
     return NextResponse.json(
       { error: 'Failed to fetch properties' },
       { status: 500 }
-    );
+    )
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const { title, description, type, location, price, bedrooms, bathrooms, area_sqft, agent_name, agent_phone, agent_email, image_url, amenities } = await request.json();
+    const formData = await request.formData()
 
-    if (!title || !type || !location || !price) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
+    const title = formData.get('title') as string
+    const description = formData.get('description') as string
+    const propertyType = formData.get('propertyType') as string
+    const price = Number(formData.get('price'))
+    const state = formData.get('state') as string
+    const city = formData.get('city') as string
+    const address = formData.get('address') as string
+    const areaSqft = Number(formData.get('areaSqft')) || 0
+    const landSize = Number(formData.get('landSize')) || 0
+    const status = formData.get('status') as string
+    const image = formData.get('image') as File | null
+    const amenities = JSON.parse((formData.get('amenities') as string) || '[]')
+    console.log('IMAGE RECEIVED:', image)
+    // Upload image first
+    let imageUrl: string | null = null
+
+    if (image) {
+
+      console.log('IMAGE NAME:', image.name)
+      console.log('IMAGE SIZE:', image.size)
+      
+      const fileName = `${Date.now()}-${image.name}`
+
+      const { error: uploadError } = await supabaseAdmin.storage
+        .from('property-images')
+        .upload(fileName, image)
+
+      if (uploadError) {
+        return NextResponse.json(
+          { error: uploadError.message },
+          { status: 500 }
+        )
+      }
+
+      const { data: publicUrlData } = supabaseAdmin.storage
+        .from('property-images')
+        .getPublicUrl(fileName)
+
+      imageUrl = publicUrlData.publicUrl
     }
 
-    const result = await query(
-      `INSERT INTO properties (title, description, type, location, price, bedrooms, bathrooms, area_sqft, agent_name, agent_phone, agent_email, image_url, amenities)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [title, description, type, location, price, bedrooms || null, bathrooms || null, area_sqft || null, agent_name, agent_phone, agent_email, image_url, amenities ? JSON.stringify(amenities) : null]
-    ) as any;
+    // Insert property after image upload
+    const { data, error } = await supabaseAdmin
+      .from('properties')
+      .insert([
+        {
+          title,
+          description,
+          type: propertyType,
+          location: `${address}, ${city}`,
+          price,
+          state,
+          city,
+          address,
+          area_sqft: areaSqft,
+          land_size: landSize,
+          amenities,
+          status,
+          verified: false,
+          image_url: imageUrl,
+        },
+      ])
+      .select()
+      .single()
 
-    return NextResponse.json(
-      { id: result.insertId, message: 'Property created successfully' },
-      { status: 201 }
-    );
+    if (error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      )
+    }
+    
+
+    return NextResponse.json(data)
   } catch (error) {
-    console.error('[v0] Create property error:', error);
+    console.error(error)
+
     return NextResponse.json(
       { error: 'Failed to create property' },
       { status: 500 }
-    );
+    )
+  }
+}
+
+export async function PUT(request: Request) {
+  try {
+    const { id, verified, } = await request.json()
+
+    const { error } = await supabaseAdmin
+      .from('properties')
+      .update({
+        verified,
+      })
+      .eq('id', id)
+
+    if (error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({
+      message: 'Property updated successfully',
+    })
+  } catch (error) {
+    console.error(error)
+
+    return NextResponse.json(
+      { error: 'Failed to update property' },
+      { status: 500 }
+    )
   }
 }

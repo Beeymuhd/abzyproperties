@@ -110,20 +110,22 @@ export interface CEOInfo {
 }
 
 // Analytics Types
-export interface AnalyticsEvent {
-  id: string
-  event_type: string
-  user_id?: string
-  property_id?: string
-  metadata: Record<string, unknown>
-  created_at: Date
-}
+// export interface AnalyticsEvent {
+//   id: string
+//   event_type: string
+//   user_id?: string
+//   property_id?: string
+//   metadata: Record<string, unknown>
+//   created_at: Date
+// }
 
 // Auth Session
 export interface Session {
-  user_id: string
+  user_id: number
+  username: string
+  name: string
   email: string
-  role: 'user' | 'admin'
-  created_at: Date
-  expires_at: Date
+  role: string
+  created_at: string
+  expires_at: string
 }

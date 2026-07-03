@@ -1,69 +1,41 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Building2, MessageSquare, Users, BarChart3 } from 'lucide-react'
 import Link from 'next/link'
 
-const stats = [
-  {
-    label: 'Total Properties',
-    value: '245',
-    icon: Building2,
-    href: '/admin/properties',
-    color: 'text-blue-500',
-  },
-  {
-    label: 'Pending Inquiries',
-    value: '18',
-    icon: MessageSquare,
-    href: '/admin/inquiries',
-    color: 'text-amber-500',
-  },
-  {
-    label: 'Active Users',
-    value: '1,234',
-    icon: Users,
-    href: '/admin/users',
-    color: 'text-green-500',
-  },
-  {
-    label: 'Monthly Views',
-    value: '5,678',
-    icon: BarChart3,
-    href: '/admin/analytics',
-    color: 'text-purple-500',
-  },
-]
-
-const recentActivities = [
-  {
-    id: 1,
-    type: 'listing',
-    message: 'New property added: Modern Duplex in Lekki',
-    time: '2 hours ago',
-  },
-  {
-    id: 2,
-    type: 'inquiry',
-    message: 'Inquiry received for Premium Office Space',
-    time: '4 hours ago',
-  },
-  {
-    id: 3,
-    type: 'user',
-    message: 'New user registration: Chioma O.',
-    time: '6 hours ago',
-  },
-  {
-    id: 4,
-    type: 'inspection',
-    message: 'Inspection scheduled for Banana Island Property',
-    time: '1 day ago',
-  },
-]
-
 export default function AdminDashboard() {
+
+  const [stats, setStats] = useState({
+   properties: 0,
+   users: 0,
+   inquiries: 0,
+ })
+
+ const [recentActivities, setRecentActivities] = useState<any[]>([])
+
+ const fetchDashboard = async () => {
+  try {
+    const response = await fetch('/api/dashboard')
+    const data = await response.json()
+
+    setStats({
+      properties: data.properties,
+      users: data.users,
+      inquiries: data.inquiries,
+    })
+
+    setRecentActivities(data.recentActivities)
+  } catch (error) {
+    console.error(error)
+  }
+ }
+
+ useEffect(() => {
+  fetchDashboard()
+ }, [])
   return (
     <div className="flex-1 p-8 space-y-8">
       {/* Header */}
@@ -76,22 +48,47 @@ export default function AdminDashboard() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat) => {
-          const Icon = stat.icon
-          return (
-            <Link key={stat.label} href={stat.href}>
-              <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">{stat.label}</p>
-                    <p className="text-3xl font-bold">{stat.value}</p>
-                  </div>
-                  <Icon className={`w-8 h-8 ${stat.color}`} />
-                </div>
-              </Card>
-            </Link>
-          )
-        })}
+        <Card className="p-6">
+  <div className="flex items-start justify-between">
+    <div>
+      <p className="text-sm text-muted-foreground">
+        Total Properties
+      </p>
+      <p className="text-3xl font-bold">
+        {stats.properties}
+      </p>
+    </div>
+    <Building2 className="w-8 h-8 text-blue-500" />
+  </div>
+</Card>
+
+<Card className="p-6">
+  <div className="flex items-start justify-between">
+    <div>
+      <p className="text-sm text-muted-foreground">
+        Total Inquiries
+      </p>
+      <p className="text-3xl font-bold">
+        {stats.inquiries}
+      </p>
+    </div>
+    <MessageSquare className="w-8 h-8 text-amber-500" />
+  </div>
+</Card>
+
+<Card className="p-6">
+  <div className="flex items-start justify-between">
+    <div>
+      <p className="text-sm text-muted-foreground">
+        Total Users
+      </p>
+      <p className="text-3xl font-bold">
+        {stats.users}
+      </p>
+    </div>
+    <Users className="w-8 h-8 text-green-500" />
+  </div>
+</Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -100,11 +97,6 @@ export default function AdminDashboard() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold">Recent Activity</h2>
-              <Link href="/admin/analytics">
-                <Button variant="ghost" size="sm">
-                  View All
-                </Button>
-              </Link>
             </div>
 
             <div className="space-y-3">
@@ -114,8 +106,13 @@ export default function AdminDashboard() {
                   className="flex items-start justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
                 >
                   <div className="space-y-1">
-                    <p className="text-sm font-medium">{activity.message}</p>
-                    <p className="text-xs text-muted-foreground">{activity.time}</p>
+                    <p className="text-sm font-medium">
+                     Inquiry from {activity.name} about{' '}
+                     {activity.property_title}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                     {new Date(activity.created_at).toLocaleString()}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -142,11 +139,6 @@ export default function AdminDashboard() {
               <Link href="/admin/ceo-section">
                 <Button className="w-full justify-start bg-transparent" variant="outline">
                   Edit CEO Info
-                </Button>
-              </Link>
-              <Link href="/admin/analytics">
-                <Button className="w-full justify-start bg-transparent" variant="outline">
-                  View Analytics
                 </Button>
               </Link>
             </div>

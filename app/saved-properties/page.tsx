@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Navbar } from '@/components/navbar'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import { Heart, Filter, MapPin, Bed, Bath, Trash2 } from 'lucide-react'
+import { Heart, Filter, MapPin, Trash2 } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -15,66 +15,46 @@ import {
 } from '@/components/ui/select'
 import { toast } from 'sonner'
 
-interface SavedProperty {
-  id: number
-  title: string
-  location: string
-  price: number
-  image: string
-  beds: number
-  baths: number
-  size: string
-  type: 'residential' | 'commercial' | 'land'
-  savedDate: Date
-}
-
-const mockSavedListings: SavedProperty[] = [
-  {
-    id: 1,
-    title: 'Modern Duplex in Abuja',
-    location: 'Lekki, Abuja',
-    price: 45000000,
-    image: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    beds: 4,
-    baths: 3,
-    size: '5,000 sqft',
-    type: 'residential',
-    savedDate: new Date(Date.now() - 86400000),
-  },
-  {
-    id: 2,
-    title: 'Premium Office Space',
-    location: 'Victoria Island, Lagos',
-    price: 120000000,
-    image: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-    beds: 10,
-    baths: 8,
-    size: '15,000 sqft',
-    type: 'commercial',
-    savedDate: new Date(Date.now() - 172800000),
-  },
-  {
-    id: 4,
-    title: 'Luxury Apartment Complex',
-    location: 'Banana Island, Ikoyi',
-    price: 250000000,
-    image: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-    beds: 5,
-    baths: 4,
-    size: '8,500 sqft',
-    type: 'residential',
-    savedDate: new Date(Date.now() - 259200000),
-  },
-]
-
-export default function SavedListingsPage() {
-  const [listings, setListings] = useState(mockSavedListings)
+export default function SavedPropertiesPage() {
+const [listings, setListings] = useState<any[]>([])
+const [loading, setLoading] = useState(true)
   const [sortBy, setSortBy] = useState('recent')
   const [filterType, setFilterType] = useState('all')
 
+  useEffect(() => {
+  fetchSavedProperties()
+}, [])
+
+const fetchSavedProperties = async () => {
+  try {
+    const session = sessionStorage.getItem('abzy_session')
+
+    if (!session) {
+      setLoading(false)
+      return
+    }
+
+    const user = JSON.parse(session)
+
+    const response = await fetch(
+      `/api/saved-properties?userId=${user.user_id}`
+    )
+
+    const data = await response.json()
+
+    setListings(data || [])
+  } catch (error) {
+    console.error(error)
+  } finally {
+    setLoading(false)
+  }
+}
+
   const filtered = listings.filter(
-    (l) => filterType === 'all' || l.type === filterType
-  )
+    l =>
+        filterType === 'all' ||
+        l.property_type === filterType
+)
 
   const sorted = [...filtered].sort((a, b) => {
     switch (sortBy) {
@@ -83,16 +63,41 @@ export default function SavedListingsPage() {
       case 'price-high':
         return b.price - a.price
       case 'recent':
-        return b.savedDate.getTime() - a.savedDate.getTime()
-      default:
+        return b.id - a.id
+        default:
         return 0
     }
   })
 
-  const handleRemove = (id: number) => {
-    setListings(listings.filter((l) => l.id !== id))
+const handleRemove = async (propertyId: number) => {
+  try {
+    const session = sessionStorage.getItem('abzy_session')
+
+    if (!session) return
+
+    const user = JSON.parse(session)
+
+    await fetch('/api/saved-properties', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        user_id: user.user_id,
+        property_id: propertyId,
+      }),
+    })
+
+    setListings((prev) =>
+      prev.filter((item) => item.id !== propertyId)
+    )
+
     toast.success('Removed from saved listings')
+  } catch (error) {
+    console.error(error)
+    toast.error('Failed to remove property')
   }
+}
 
   const formatSavedDate = (date: Date) => {
     const now = new Date()
@@ -174,8 +179,13 @@ export default function SavedListingsPage() {
                 {/* Image */}
                 <div
                   className="h-48 bg-gradient-to-br group-hover:scale-105 transition-transform duration-300 relative"
-                  style={{ backgroundImage: property.image }}
-                >
+style={{
+  backgroundImage: property.image_url
+    ? `url(${property.image_url})`
+    : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+  backgroundSize: 'cover',
+  backgroundPosition: 'center',
+}}                >
                   <div className="absolute top-3 right-3">
                     <Button
                       size="icon"
@@ -188,8 +198,8 @@ export default function SavedListingsPage() {
                   </div>
                   <div className="absolute bottom-3 left-3">
                     <span className="bg-black/60 text-white text-xs px-2 py-1 rounded">
-                      Saved {formatSavedDate(property.savedDate)}
-                    </span>
+                     Saved
+                   </span>
                   </div>
                 </div>
 
@@ -204,26 +214,19 @@ export default function SavedListingsPage() {
                       {property.location}
                     </p>
                     <span className="inline-block bg-muted text-muted-foreground text-xs px-2 py-1 rounded">
-                      {property.type.charAt(0).toUpperCase() +
-                        property.type.slice(1)}
+                     {property.property_type}
                     </span>
                   </div>
 
                   {/* Details */}
                   <div className="flex gap-3 text-xs text-muted-foreground py-2 border-y border-border">
-                    {property.beds > 0 && (
-                      <span className="flex items-center gap-1">
-                        <Bed className="w-3 h-3" />
-                        {property.beds}
-                      </span>
-                    )}
-                    {property.baths > 0 && (
-                      <span className="flex items-center gap-1">
-                        <Bath className="w-3 h-3" />
-                        {property.baths}
-                      </span>
-                    )}
-                    <span>{property.size}</span>
+                   <span>
+  {property.area_sqft
+    ? `${Number(property.area_sqft).toLocaleString()} sqft`
+    : property.land_size
+    ? `${property.land_size} sqm`
+    : 'Property'}
+</span>
                   </div>
 
                   {/* Footer */}

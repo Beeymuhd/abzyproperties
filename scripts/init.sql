@@ -192,4 +192,4 @@ INSERT INTO properties (title, description, type, location, price, bedrooms, bat
 
 INSERT INTO ceo_info (ceo_name, bio, title) VALUES
 ('Ibrahim Shahid Ahmad', 'Visionary leader with 15 years of real estate experience', 'Chief Executive Officer'),
-('Abubakar Abba Muhammad', 'Expert in property management and sales strategy', 'Co-Founder');
+('Abubakar Abba Habib', 'Expert in property management and sales strategy', 'Co-Founder');

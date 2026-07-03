@@ -1,13 +1,17 @@
 import { NextResponse } from 'next/server'
 
 export async function POST() {
-  return NextResponse.json(
+  const response = NextResponse.json(
     { message: 'Logged out successfully' },
-    {
-      status: 200,
-      headers: {
-        'Set-Cookie': 'session=; Path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;',
-      },
-    }
+    { status: 200 }
   )
+
+  response.cookies.set({
+    name: 'abzy_session_token',
+    value: '',
+    expires: new Date(0), // immediately expire
+    path: '/',
+  })
+
+  return response
 }

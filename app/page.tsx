@@ -1,7 +1,10 @@
+import { supabaseAdmin } from '@/lib/supabase-admin'
 import Link from 'next/link'
 import { Navbar } from '@/components/navbar'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import TestimonialsCarousel from '@/components/testimonials-carousel'
+import { FaInstagram, FaWhatsapp, FaTiktok } from 'react-icons/fa'
 import {
   MapPin,
   Zap,
@@ -13,82 +16,54 @@ import {
   Award,
 } from 'lucide-react'
 
-const featuredListings = [
-  {
-    id: 1,
-    title: 'Modern Duplex in Abuja',
-    location: 'Lekki, Abuja',
-    price: '₦45,000,000',
-    image:
-      'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    beds: 4,
-    baths: 3,
-    size: '5,000 sqft',
-    verified: true,
-  },
-  {
-    id: 2,
-    title: 'Premium Office Space',
-    location: 'Victoria Island, Lagos',
-    price: '₦120,000,000',
-    image:
-      'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-    beds: 10,
-    baths: 8,
-    size: '15,000 sqft',
-    verified: true,
-  },
-  {
-    id: 3,
-    title: 'Residential Land Plot',
-    location: 'Ikoyi, Lagos',
-    price: '₦35,000,000',
-    image:
-      'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-    beds: 2,
-    baths: 2,
-    size: '1,200 sqft',
-    verified: true,
-  },
-  {
-    id: 4,
-    title: 'Luxury Apartment Complex',
-    location: 'Banana Island, Ikoyi',
-    price: '₦250,000,000',
-    image:
-      'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-    beds: 5,
-    baths: 4,
-    size: '8,500 sqft',
-    verified: true,
-  },
-]
+export const metadata = {
+  title: 'Abzy Properties | Buy & Sell Real Estate in Nigeria',
+  description:
+    'Find verified houses and lands properties across Nigeria.',
+}
 
-const testimonials = [
-  {
-    name: 'Chioma Obi',
-    role: 'Real Estate Investor',
-    message:
-      'Abzy Properties made finding my dream property so easy. The verified listings and instant communication tools saved me months of searching.',
-    rating: 5,
-  },
-  {
-    name: 'Ibrahim Abubakar',
-    role: 'Business Owner',
-    message:
-      'Best platform for commercial real estate in Abuja. Professional, transparent, and highly responsive.',
-    rating: 5,
-  },
-  {
-    name: 'Fiona Adeleke',
-    role: 'Property Developer',
-    message:
-      'The admin dashboard is a game-changer for managing multiple listings. I love the analytics features.',
-    rating: 5,
-  },
-]
+export default async function HomePage() {
+  const { data: featuredListings } = await supabaseAdmin
+  .from('properties')
+  .select('*')
+  .eq('verified', true)
+  .order('created_at', { ascending: false })
+  .limit(4)
 
-export default function HomePage() {
+const { data: testimonials } = await supabaseAdmin
+  .from('testimonials')
+  .select('*')
+  .eq('approved', true)
+  .order('created_at', { ascending: false })
+  .limit(3)
+
+  const { data: ceos } = await supabaseAdmin
+  .from('ceo_info')
+  .select('ceo_name')
+  .order('order_number', { ascending: true })
+
+  const { count: propertiesCount } = await supabaseAdmin
+  .from('properties')
+  .select('*', { count: 'exact', head: true })
+
+const { count: verifiedCount } = await supabaseAdmin
+  .from('properties')
+  .select('*', { count: 'exact', head: true })
+  .eq('verified', true)
+
+const { count: usersCount } = await supabaseAdmin
+  .from('users')
+  .select('*', { count: 'exact', head: true })
+
+  const { data: settings } = await supabaseAdmin
+  .from('settings')
+  .select( 'instagram_url, whatsapp_url, tiktok_url')
+  .single()
+
+  const verifiedPercentage =
+  propertiesCount && propertiesCount > 0
+    ? Math.round(((verifiedCount || 0) / propertiesCount) * 100)
+    : 0
   return (
     <>
       <Navbar />
@@ -114,31 +89,50 @@ export default function HomePage() {
                 </p>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Link href="/properties">
-                  <Button size="lg" className="w-full">
-                    Browse Properties
-                  </Button>
-                </Link>
-                <Link href="/auth/signup">
-                  <Button size="lg" variant="outline" className="w-full bg-transparent">
-                    Get Started
-                  </Button>
-                </Link>
-              </div>
+              <div className="space-y-4">
+  <div className="flex flex-col sm:flex-row gap-4">
+    <Link href="/properties">
+      <Button size="lg" className="w-full">
+        Browse Properties
+      </Button>
+    </Link>
+
+    <Link href="/auth/signup">
+      <Button
+        size="lg"
+        variant="outline"
+        className="w-full bg-transparent"
+      >
+        Get Started
+      </Button>
+    </Link>
+  </div>
+
+  <div className="rounded-lg border bg-primary/5 px-4 py-3">
+    <p className="text-sm text-muted-foreground">
+      Already bought or inspected a property through Abzy Properties?
+      <Link
+        href="/testimonials"
+        className="ml-1 font-semibold text-primary hover:underline"
+      >
+        Leave a review →
+      </Link>
+    </p>
+  </div>
+</div>
 
               {/* Stats */}
               <div className="grid grid-cols-3 gap-4 pt-8">
                 <div>
-                  <p className="text-2xl font-bold text-primary">2,500+</p>
+                  <p className="text-2xl font-bold text-primary">{propertiesCount || 0}</p>
                   <p className="text-sm text-muted-foreground">Properties</p>
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-primary">10,000+</p>
+                  <p className="text-2xl font-bold text-primary">{usersCount || 0}</p>
                   <p className="text-sm text-muted-foreground">Happy Buyers</p>
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-primary">100%</p>
+                  <p className="text-2xl font-bold text-primary">{verifiedPercentage}%</p>
                   <p className="text-sm text-muted-foreground">Verified</p>
                 </div>
               </div>
@@ -166,15 +160,20 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {featuredListings.map((listing) => (
-              <Card
+{(featuredListings || []).map((listing) => (        
+        <Card
                 key={listing.id}
                 className="overflow-hidden hover:shadow-lg transition-all duration-300 group cursor-pointer"
               >
                 <div
                   className="h-48 bg-gradient-to-br group-hover:scale-105 transition-transform duration-300"
-                  style={{ backgroundImage: listing.image }}
-                />
+style={{
+  backgroundImage: listing.image_url
+    ? `url(${listing.image_url})`
+    : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+  backgroundSize: 'cover',
+  backgroundPosition: 'center',
+                }}                />
                 <div className="p-4 space-y-3">
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="font-semibold text-sm line-clamp-2 text-balance">
@@ -192,12 +191,16 @@ export default function HomePage() {
 
                   <div className="space-y-2">
                     <p className="text-xl font-bold text-primary">
-                      {listing.price}
-                    </p>
-                    <div className="flex gap-3 text-xs text-muted-foreground">
-                      <span>{listing.beds} Beds</span>
-                      <span>{listing.baths} Baths</span>
-                    </div>
+₦{Number(listing.price).toLocaleString()}                    </p>
+                  <div className="flex gap-3 text-xs text-muted-foreground">
+  <span>{listing.property_type}</span>
+
+  {listing.area_sqft ? (
+    <span>{listing.area_sqft.toLocaleString()} sqft</span>
+  ) : listing.land_size ? (
+    <span>{listing.land_size} sqm</span>
+  ) : null}
+</div>
                   </div>
 
                   <Link href={`/properties/${listing.id}`}>
@@ -243,7 +246,7 @@ export default function HomePage() {
                 {
                   icon: Search,
                   title: 'Smart Search',
-                  description: 'Real-time filters and Google Maps integration',
+                  description: 'Real-time filters',
                 },
                 {
                   icon: MessageSquare,
@@ -280,37 +283,13 @@ export default function HomePage() {
               What Our Clients Say
             </h2>
             <p className="text-muted-foreground text-lg">
-              Join thousands of satisfied property buyers
+              Join satisfied property buyers
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {testimonials.map((testimonial, index) => (
-              <Card
-                key={index}
-                className="p-6 border-border/50 bg-card/50 backdrop-blur"
-              >
-                <div className="flex gap-1 mb-4">
-                  {Array(testimonial.rating)
-                    .fill(0)
-                    .map((_, i) => (
-                      <span key={i} className="text-yellow-400">
-                        ★
-                      </span>
-                    ))}
-                </div>
-                <p className="text-muted-foreground mb-4">
-                  "{testimonial.message}"
-                </p>
-                <div>
-                  <p className="font-semibold">{testimonial.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {testimonial.role}
-                  </p>
-                </div>
-              </Card>
-            ))}
-          </div>
+          <TestimonialsCarousel
+  testimonials={testimonials || []}
+/>
         </div>
       </section>
 
@@ -319,7 +298,7 @@ export default function HomePage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6">
           <h2 className="text-3xl sm:text-4xl font-bold">Ready to Find Your Property?</h2>
           <p className="text-lg text-muted-foreground">
-            Join Abzy Properties today and get access to thousands of verified listings
+            Join Abzy Properties today and get access to verified listings
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/properties">
@@ -335,72 +314,129 @@ export default function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-card/30 border-t border-border/50 py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-            <div className="space-y-4">
-              <h3 className="font-bold text-lg">Abzy Properties</h3>
-              <p className="text-sm text-muted-foreground">
-                Your trusted partner for premium real estate in Abuja
-              </p>
-            </div>
-            <div className="space-y-2">
-              <h4 className="font-semibold text-sm">Quick Links</h4>
-              <ul className="space-y-1 text-sm text-muted-foreground">
-                <li>
-                  <Link href="/properties" className="hover:text-primary">
-                    Browse Properties
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/" className="hover:text-primary">
-                    About Us
-                  </Link>
-                </li>
-              </ul>
-            </div>
-            <div className="space-y-2">
-              <h4 className="font-semibold text-sm">Company</h4>
-              <ul className="space-y-1 text-sm text-muted-foreground">
-                <li>
-                  <Link href="/" className="hover:text-primary">
-                    Blog
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/" className="hover:text-primary">
-                    Contact
-                  </Link>
-                </li>
-              </ul>
-            </div>
-            <div className="space-y-2">
-              <h4 className="font-semibold text-sm">Legal</h4>
-              <ul className="space-y-1 text-sm text-muted-foreground">
-                <li>
-                  <Link href="/" className="hover:text-primary">
-                    Privacy
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/" className="hover:text-primary">
-                    Terms
-                  </Link>
-                </li>
-              </ul>
-            </div>
-          </div>
+      <footer className="border-t bg-background">
+  <div className="max-w-7xl mx-auto px-6 lg:px-8 py-16">
+    <div className="grid gap-10 md:grid-cols-3">
+      {/* Brand */}
+      <div>
+        <Link href="/">
+          <h2 className="text-xl font-bold tracking-tight">
+            Abzy Properties
+          </h2>
+        </Link>
 
-          <div className="border-t border-border/30 pt-8 text-center text-sm text-muted-foreground">
-            <p>
-              © {new Date().getFullYear()} Abzy Properties. All rights reserved.
-            </p>
-            <p className="mt-2">
-              Founded by Ibrahim Shahid Ahmad & Abubakar Abba Muhammad
-            </p>
-          </div>
+        <p className="mt-4 text-sm leading-7 text-muted-foreground">
+          Your trusted partner for
+        <br/> 
+          premium real estate in Abuja.
+       </p>
+
+       <div className="mt-5 flex items-center gap-4">
+
+  {settings?.instagram_url && (
+    <Link
+      href={settings.instagram_url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-muted-foreground hover:text-primary transition-colors"
+    >
+      <FaInstagram size={22} />
+    </Link>
+  )}
+
+  {settings?.whatsapp_url && (
+    <Link
+      href={settings.whatsapp_url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-muted-foreground hover:text-primary transition-colors"
+    >
+      <FaWhatsapp size={22} />
+    </Link>
+  )}
+
+  {settings?.tiktok_url && (
+    <Link
+      href={settings.tiktok_url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-muted-foreground hover:text-primary transition-colors"
+    >
+      <FaTiktok size={22} />
+    </Link>
+  )}
+
+</div>
+
+      </div>
+
+      {/* Quick Links */}
+      <div>
+        <h3 className="text-sm font-semibold uppercase tracking-wide">
+          Quick Links
+        </h3>
+
+        <div className="mt-4 space-y-3">
+          <Link
+            href="/properties"
+            className="block text-sm text-muted-foreground hover:text-primary transition-colors"
+          >
+            Browse Properties
+          </Link>
+
+          <Link
+            href="/about"
+            className="block text-sm text-muted-foreground hover:text-primary transition-colors"
+          >
+            About Us
+          </Link>
         </div>
-      </footer>
+      </div>
+
+      {/* Legal */}
+      <div>
+        <h3 className="text-sm font-semibold uppercase tracking-wide">
+          Legal
+        </h3>
+
+        <div className="mt-4 space-y-3">
+          <Link
+            href="/privacy"
+            className="block text-sm text-muted-foreground hover:text-primary transition-colors"
+          >
+            Privacy Policy
+          </Link>
+
+          <Link
+            href="/terms"
+            className="block text-sm text-muted-foreground hover:text-primary transition-colors"
+          >
+            Terms & Conditions
+          </Link>
+        </div>
+      </div>
+    </div>
+
+    <div className="mt-12 border-t pt-8 text-center space-y-2">
+
+  <p className="text-sm text-muted-foreground">
+    © {new Date().getFullYear()} Abzy Properties. All rights reserved.
+  </p>
+
+  <p className="text-sm text-muted-foreground">
+  Founded by{" "}
+  <span className="font-semibold text-foreground">
+    {ceos?.[0]?.ceo_name}
+  </span>{" "}
+  and{" "}
+  <span className="font-semibold text-foreground">
+    {ceos?.[1]?.ceo_name}
+  </span>
+</p>
+
+</div>
+  </div>
+</footer>
     </>
   )
 }

@@ -1,11 +1,11 @@
 'use client'
-
-import { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Navbar } from '@/components/navbar'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import Link from 'next/link'
+import { ChevronLeft } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -13,134 +13,104 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { MapPin, Heart, Bed, Bath, Award } from 'lucide-react'
+import { MapPin, Heart,  Award } from 'lucide-react'
 
-const allProperties = [
-  {
-    id: 1,
-    title: 'Modern Duplex in Abuja',
-    location: 'Lekki, Abuja',
-    price: 45000000,
-    image: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    beds: 4,
-    baths: 3,
-    size: '5,000 sqft',
-    verified: true,
-    type: 'residential',
-    description: 'Beautiful modern duplex with excellent facilities',
-  },
-  {
-    id: 2,
-    title: 'Premium Office Space',
-    location: 'Victoria Island, Lagos',
-    price: 120000000,
-    image: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-    beds: 10,
-    baths: 8,
-    size: '15,000 sqft',
-    verified: true,
-    type: 'commercial',
-    description: 'State-of-the-art commercial space for businesses',
-  },
-  {
-    id: 3,
-    title: 'Residential Land Plot',
-    location: 'Ikoyi, Lagos',
-    price: 35000000,
-    image: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-    beds: 0,
-    baths: 0,
-    size: '1,200 sqft',
-    verified: true,
-    type: 'land',
-    description: 'Prime land location in premium area',
-  },
-  {
-    id: 4,
-    title: 'Luxury Apartment Complex',
-    location: 'Banana Island, Ikoyi',
-    price: 250000000,
-    image: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-    beds: 5,
-    baths: 4,
-    size: '8,500 sqft',
-    verified: true,
-    type: 'residential',
-    description: 'Exclusive luxury apartment in sought-after location',
-  },
-  {
-    id: 5,
-    title: 'Commercial Complex',
-    location: 'Wuse 2, Abuja',
-    price: 180000000,
-    image: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-    beds: 8,
-    baths: 6,
-    size: '12,000 sqft',
-    verified: false,
-    type: 'commercial',
-    description: 'Modern commercial complex with multiple units',
-  },
-  {
-    id: 6,
-    title: 'Residential Estate Plot',
-    location: 'Asokoro, Abuja',
-    price: 65000000,
-    image: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
-    beds: 0,
-    baths: 0,
-    size: '2,500 sqft',
-    verified: true,
-    type: 'land',
-    description: 'Spacious land plot in secure residential estate',
-  },
-  {
-    id: 7,
-    title: 'Penthouse Apartment',
-    location: 'Abuja City Center',
-    price: 95000000,
-    image: 'linear-gradient(135deg, #ff9a56 0%, #ff6a88 100%)',
-    beds: 3,
-    baths: 3,
-    size: '4,500 sqft',
-    verified: true,
-    type: 'residential',
-    description: 'Stunning penthouse with panoramic city views',
-  },
-  {
-    id: 8,
-    title: 'Business Hub Space',
-    location: 'Marina, Lagos',
-    price: 150000000,
-    image: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    beds: 6,
-    baths: 5,
-    size: '10,000 sqft',
-    verified: true,
-    type: 'commercial',
-    description: 'Prime business hub in central location',
-  },
-]
+
+  const SESSION_STORAGE_KEY = 'abzy_session'
+
 
 export default function PropertiesPage() {
-  const [properties, setProperties] = useState(allProperties)
+  const [properties, setProperties] = useState<any[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
-  const [savedListings, setSavedListings] = useState<number[]>([])
+  const [savedProperties, setSavedProperties] = useState<number[]>([])
+const [userId, setUserId] = useState<string | null>(null)
+useEffect(() => {
+  fetchProperties()
+
+  const session = sessionStorage.getItem(SESSION_STORAGE_KEY)
+
+  if (session) {
+  const parsed = JSON.parse(session)
+
+  setUserId(parsed.user_id)
+
+  fetchSavedProperties(parsed.user_id)
+}
+}, [])
+
+const fetchProperties = async () => {
+  try {
+    const response = await fetch('/api/properties')
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch properties')
+    }
+
+    const data = await response.json()
+
+    setProperties(
+      data.filter((property: any) => property.verified === true)
+    )
+  } catch (error) {
+    console.error(error)
+  }
+}
 
   const filtered = properties.filter((p) => {
     const matchesSearch =
       p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.location.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesType = typeFilter === 'all' || p.type === typeFilter
-    return matchesSearch && matchesType
+const matchesType =
+  typeFilter === 'all' ||
+  p.property_type === typeFilter
+      return matchesSearch && matchesType
   })
 
-  const toggleSaved = (id: number) => {
-    setSavedListings((prev) =>
-      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
-    )
+const toggleSaved = async (propertyId: number) => {
+  if (!userId) {
+    alert("Please login first")
+    return
   }
+
+  const isSaved = savedProperties.includes(propertyId)
+
+  try {
+    const response = await fetch("/api/saved-properties", {
+      method: isSaved ? "DELETE" : "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        user_id: userId,
+        property_id: propertyId,
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error("Request failed")
+    }
+
+    // Reload from database instead of guessing
+    await fetchSavedProperties(userId)
+
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+
+const fetchSavedProperties = async (userId: string) => {
+  const response = await fetch(
+    `/api/saved-properties?userId=${userId}`
+  )
+
+  const data = await response.json()
+
+  setSavedProperties(data.map((p: any) => p.id))
+}
+  console.log('Properties:', properties)
+
 
   return (
     <>
@@ -150,9 +120,17 @@ export default function PropertiesPage() {
         {/* Header */}
         <div className="space-y-8">
           <div className="space-y-2">
+            <Link
+  href="/"
+  className="flex items-center gap-2 text-primary hover:underline mb-6"
+>
+  <ChevronLeft className="w-4 h-4" />
+  Back to Homepage
+</Link>
+
             <h1 className="text-4xl font-bold">Browse Properties</h1>
             <p className="text-lg text-muted-foreground">
-              Discover {properties.length} verified listings across Abuja and Lagos
+              Discover {properties.length} verified listings across Abuja.
             </p>
           </div>
 
@@ -207,8 +185,13 @@ export default function PropertiesPage() {
                   {/* Image */}
                   <div
                     className="h-48 bg-gradient-to-br group-hover:scale-105 transition-transform duration-300 relative"
-                    style={{ backgroundImage: property.image }}
-                  >
+                    style={{
+    backgroundImage: property.image_url
+      ? `url(${property.image_url})`
+      : 'linear-gradient(135deg,#667eea,#764ba2)',
+    backgroundSize: 'cover',
+    backgroundPosition: 'center'
+}} >
                     <div className="absolute top-3 right-3">
                       <Button
                         size="icon"
@@ -217,12 +200,12 @@ export default function PropertiesPage() {
                         onClick={() => toggleSaved(property.id)}
                       >
                         <Heart
-                          className={`w-4 h-4 ${
-                            savedListings.includes(property.id)
-                              ? 'fill-current text-red-500'
-                              : ''
-                          }`}
-                        />
+  className={`w-5 h-5 transition-all duration-200 ${
+    savedProperties.includes(property.id)
+      ? "fill-red-500 text-red-500 scale-110"
+      : "text-gray-500 hover:text-red-400"
+  }`}
+/>
                       </Button>
                     </div>
                     {property.verified && (
@@ -250,19 +233,11 @@ export default function PropertiesPage() {
 
                     {/* Details */}
                     <div className="flex gap-3 text-xs text-muted-foreground py-2 border-y border-border">
-                      {property.beds > 0 && (
-                        <span className="flex items-center gap-1">
-                          <Bed className="w-3 h-3" />
-                          {property.beds}
-                        </span>
-                      )}
-                      {property.baths > 0 && (
-                        <span className="flex items-center gap-1">
-                          <Bath className="w-3 h-3" />
-                          {property.baths}
-                        </span>
-                      )}
-                      <span>{property.size}</span>
+                      <span>{property.area_sqft
+  ? `${property.area_sqft.toLocaleString()} sqft`
+  : property.land_size
+  ? `${property.land_size} sqm`
+  : 'Property'}</span>
                     </div>
 
                     {/* Footer */}

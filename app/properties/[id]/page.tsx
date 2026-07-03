@@ -1,13 +1,15 @@
 'use client'
 
 import React from "react"
-
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { Textarea } from '@/components/ui/textarea'
+import { useParams } from 'next/navigation'
 import { Navbar } from '@/components/navbar'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { getSession } from '@/lib/auth'
 import {
   Select,
   SelectContent,
@@ -17,55 +19,41 @@ import {
 } from '@/components/ui/select'
 import {
   MapPin,
-  Bed,
-  Bath,
   Award,
   MessageSquare,
   Phone,
   Mail,
   Heart,
-  Share2,
   ChevronLeft,
 } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 
-const propertyDetails = {
-  1: {
-    title: 'Modern Duplex in Abuja',
-    location: 'Lekki, Abuja',
-    price: 45000000,
-    image: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    beds: 4,
-    baths: 3,
-    size: '5,000 sqft',
-    verified: true,
-    type: 'residential',
-    description:
-      'Beautiful modern duplex with excellent facilities and strategic location',
-    fullDescription:
-      'This stunning modern duplex is located in one of the most sought-after neighborhoods in Abuja. It features spacious bedrooms, modern kitchen, and a beautiful garden. The property is fully furnished and ready for immediate occupancy.',
-    amenities: [
-      'Air Conditioning',
-      'Garden',
-      'Parking Space',
-      'Modern Kitchen',
-      'Swimming Pool',
-      'Security System',
-      'Backup Generator',
-      'Good Road Network',
-    ],
-    images: [
-      'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    ],
-  },
-}
+export default function PropertyDetailPage() {
+  const params = useParams()
 
-export default function PropertyDetailPage({ params }: { params: { id: string } }) {
-  const property = propertyDetails[params.id as keyof typeof propertyDetails] || propertyDetails[1]
-  const [contactMethod, setContactMethod] = useState('whatsapp')
+  const [property, setProperty] = useState<any>(null)
+
+  useEffect(() => {
+    const fetchProperty = async () => {
+      try {
+        const response = await fetch('/api/properties')
+
+        const data = await response.json()
+
+        const foundProperty = data.find(
+          (p: any) => String(p.id) === String(params.id)
+        )
+
+        setProperty(foundProperty)
+      } catch (error) {
+        console.error(error)
+      }
+    }
+
+    fetchProperty()
+    }, [params.id])
+   const [contactMethod, setContactMethod] = useState('whatsapp')
   const [inquiryForm, setInquiryForm] = useState({
     name: '',
     email: '',
@@ -74,15 +62,65 @@ export default function PropertyDetailPage({ params }: { params: { id: string } 
   })
   const [saved, setSaved] = useState(false)
 
-  const handleInquiry = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!inquiryForm.name || !inquiryForm.email) {
-      toast.error('Please fill in all required fields')
-      return
-    }
-    toast.success('Your inquiry has been sent to the property agent')
-    setInquiryForm({ name: '', email: '', phone: '', message: '' })
+  const handleInquiry = async (e: React.FormEvent) => {
+  e.preventDefault()
+
+  if (!inquiryForm.name || !inquiryForm.email) {
+    toast.error('Please fill in all required fields')
+    return
   }
+
+  try {
+const session = getSession()
+    const response = await fetch('/api/inquiries', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    user_id: session?.user_id,
+    property_id: property.id,
+    property_title: property.title,
+    name: inquiryForm.name,
+    contact:
+      contactMethod === 'email'
+        ? inquiryForm.email
+        : inquiryForm.phone,
+    method: contactMethod,
+    message: inquiryForm.message,
+  }),
+})
+
+if (!response.ok) {
+  throw new Error('Failed to send inquiry')
+}
+
+    toast.success('Inquiry sent successfully')
+
+    setInquiryForm({
+      name: '',
+      email: '',
+      phone: '',
+      message: '',
+    })
+
+    setContactMethod('whatsapp')
+  } catch (error) {
+    console.error(error)
+    toast.error('Failed to send inquiry')
+  }
+}
+
+  if (!property) {
+  return (
+    <>
+      <Navbar />
+      <div className="p-10 text-center">
+        Loading property...
+      </div>
+    </>
+  )
+}
 
   return (
     <>
@@ -99,20 +137,13 @@ export default function PropertyDetailPage({ params }: { params: { id: string } 
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-8">
             {/* Image Gallery */}
-            <div className="space-y-4">
-              <div
-                className="w-full h-96 rounded-xl bg-gradient-to-br"
-                style={{ backgroundImage: property.image }}
-              />
-              <div className="grid grid-cols-3 gap-4">
-                {property.images.map((img, i) => (
-                  <div
-                    key={i}
-                    className="h-20 rounded-lg bg-gradient-to-br cursor-pointer hover:opacity-80 transition"
-                    style={{ backgroundImage: img }}
-                  />
-                ))}
-              </div>
+            <div className="overflow-hidden rounded-x1">
+             <img
+  src={property.image_url}
+  alt={property.title}
+  className="w-full h-[500px] object-cover"
+/>
+              
             </div>
 
             {/* Property Info */}
@@ -123,7 +154,7 @@ export default function PropertyDetailPage({ params }: { params: { id: string } 
                     <h1 className="text-3xl font-bold mb-2">{property.title}</h1>
                     <p className="text-lg text-muted-foreground flex items-center gap-2 mb-4">
                       <MapPin className="w-5 h-5" />
-                      {property.location}
+                     {property.address}, {property.city}   
                     </p>
                   </div>
                   {property.verified && (
@@ -135,22 +166,18 @@ export default function PropertyDetailPage({ params }: { params: { id: string } 
                 </div>
 
                 <div className="flex gap-6 py-4 border-y border-border">
-                  {property.beds > 0 && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Bedrooms</p>
-                      <p className="text-2xl font-bold">{property.beds}</p>
-                    </div>
-                  )}
-                  {property.baths > 0 && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Bathrooms</p>
-                      <p className="text-2xl font-bold">{property.baths}</p>
-                    </div>
-                  )}
                   <div>
-                    <p className="text-sm text-muted-foreground">Size</p>
-                    <p className="text-2xl font-bold">{property.size}</p>
-                  </div>
+<p className="text-sm text-muted-foreground">
+  {property.area_sqft ? 'Floor Area' : 'Land Size'}
+</p>
+  <p className="text-2xl font-bold">
+    {property.area_sqft
+      ? `${property.area_sqft.toLocaleString()} sqft`
+      : property.land_size
+      ? `${property.land_size} sqm`
+      : ''}
+  </p>
+</div>
                 </div>
               </div>
             </Card>
@@ -159,20 +186,26 @@ export default function PropertyDetailPage({ params }: { params: { id: string } 
             <Card className="p-6 space-y-4">
               <h2 className="text-2xl font-bold">About This Property</h2>
               <p className="text-muted-foreground leading-relaxed">
-                {property.fullDescription}
-              </p>
+             {property.description}              </p>
             </Card>
 
             {/* Amenities */}
             <Card className="p-6 space-y-4">
               <h2 className="text-2xl font-bold">Amenities</h2>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {property.amenities.map((amenity, i) => (
-                  <div key={i} className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-                    <div className="w-2 h-2 bg-primary rounded-full" />
-                    <span className="text-sm">{amenity}</span>
-                  </div>
-                ))}
+                {property.amenities?.length ? (
+  property.amenities.map((amenity: string, i: number) => (
+    <div
+      key={i}
+      className="flex items-center gap-2 p-3 bg-muted rounded-lg"
+    >
+      <div className="w-2 h-2 bg-primary rounded-full" />
+      <span>{amenity}</span>
+    </div>
+  ))
+) : (
+  <p>No amenities listed</p>
+)}
               </div>
             </Card>
           </div>
@@ -190,38 +223,53 @@ export default function PropertyDetailPage({ params }: { params: { id: string } 
                 </div>
                 <Button
                   className="w-full gap-2"
-                  onClick={() => {
-                    setSaved(!saved)
-                    toast.success(saved ? 'Removed from saved' : 'Added to saved')
-                  }}
+                  onClick={async () => {
+  const session = getSession()
+
+  if (!session) {
+    toast.error('Please login first')
+    return
+  }
+
+  try {
+    if (!saved) {
+      await fetch('/api/saved-properties', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: session.user_id,
+          property_id: property.id,
+        }),
+      })
+
+      setSaved(true)
+      toast.success('Property saved')
+    } else {
+      await fetch('/api/saved-properties', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: session.user_id,
+          property_id: property.id,
+        }),
+      })
+
+      setSaved(false)
+      toast.success('Property removed')
+    }
+  } catch (err) {
+    console.error(err)
+    toast.error('Something went wrong')
+  }
+}}
                   variant={saved ? 'default' : 'outline'}
                 >
                   <Heart className={`w-4 h-4 ${saved ? 'fill-current' : ''}`} />
                   {saved ? 'Saved' : 'Save Property'}
-                </Button>
-                <Button variant="outline" className="w-full gap-2 bg-transparent">
-                  <Share2 className="w-4 h-4" />
-                  Share
-                </Button>
-              </div>
-            </Card>
-
-            {/* Contact Methods */}
-            <Card className="p-6 space-y-4">
-              <h3 className="font-bold text-lg">Contact Agent</h3>
-
-              <div className="space-y-3">
-                <Button className="w-full gap-2 bg-green-600 hover:bg-green-700">
-                  <MessageSquare className="w-4 h-4" />
-                  WhatsApp
-                </Button>
-                <Button className="w-full gap-2 variant-outline">
-                  <Phone className="w-4 h-4" />
-                  Call Agent
-                </Button>
-                <Button className="w-full gap-2 variant-outline">
-                  <Mail className="w-4 h-4" />
-                  Send Email
                 </Button>
               </div>
             </Card>
@@ -291,6 +339,23 @@ export default function PropertyDetailPage({ params }: { params: { id: string } 
                     </SelectContent>
                   </Select>
                 </div>
+
+                <div className="space-y-2">
+  <Label htmlFor="message" className="text-sm">
+    Message
+  </Label>
+  <Textarea
+    id="message"
+    placeholder="Write your inquiry..."
+    value={inquiryForm.message}
+    onChange={(e) =>
+      setInquiryForm({
+        ...inquiryForm,
+        message: e.target.value,
+      })
+    }
+  />
+</div>
 
                 <Button type="submit" className="w-full">
                   Send Inquiry

@@ -3,20 +3,32 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Award, MapPin, Users, TrendingUp, Phone, Mail } from 'lucide-react'
 import Link from 'next/link'
+import { supabaseAdmin } from '@/lib/supabase-admin'
+import Image from 'next/image'
 
-export default function AboutPage() {
+
+export default async function AboutPage() {
+  const { data: cac } = await supabaseAdmin
+  .from('cac_registration')
+  .select('*')
+  .limit(1)
+  .single()
+
+  
+
+
   const ceos = [
     {
       name: 'Ibrahim Shahid Ahmad',
       position: 'Chief Executive Officer',
-      bio: 'Visionary leader with over 15 years of experience in real estate development and digital innovation. Ibrahim founded Abzy Properties with a mission to revolutionize property transactions in Africa.',
-      expertise: ['Real Estate', 'Business Strategy', 'Digital Innovation'],
+      bio: 'Visionary leader with years of experience in real estate development. Ibrahim founded Abzy Properties with a mission to revolutionize property transactions in Abuja.',
+      expertise: ['Real Estate', 'Business Strategy'],
     },
     {
-      name: 'Abubakar Abba Muhammad',
+      name: 'Abubakar Abba Habib',
       position: 'Co-Chief Executive Officer',
-      bio: 'Strategic partner and operational expert with extensive background in property management and customer relations. Abubakar ensures every client receives exceptional service and support.',
-      expertise: ['Property Management', 'Client Relations', 'Operations'],
+      bio: 'Strategic partner and operational expert with extensive background in property development. Abubakar ensures every client receives exceptional service and support.',
+      expertise: ['Property Development', 'Client Relations', 'Operations'],
     },
   ]
 
@@ -43,16 +55,11 @@ export default function AboutPage() {
       icon: MapPin,
       title: 'Wide Coverage',
       description:
-        'Access thousands of properties across Abuja, Lagos, and other major Nigerian cities',
+        'Access our properties across Abuja',
     },
   ]
 
-  const stats = [
-    { label: 'Properties Listed', value: '2,500+' },
-    { label: 'Happy Clients', value: '10,000+' },
-    { label: 'Years of Experience', value: '15+' },
-    { label: 'Verified Agents', value: '50+' },
-  ]
+
 
   return (
     <>
@@ -64,22 +71,14 @@ export default function AboutPage() {
           <div className="space-y-4">
             <h1 className="text-5xl font-bold">About Abzy Properties</h1>
             <p className="text-xl text-muted-foreground max-w-2xl">
-              Transforming the real estate market with innovative digital solutions,
+              Transforming the real estate market with innovative solutions,
               verified listings, and exceptional client service. Your trusted partner
-              for smart property investment in Nigeria.
+              for reliable properties and lands in Nigeria.
             </p>
           </div>
         </section>
 
-        {/* Stats Section */}
-        <section className="py-12 grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
-          {stats.map((stat, i) => (
-            <Card key={i} className="p-6 text-center">
-              <p className="text-3xl font-bold text-primary mb-2">{stat.value}</p>
-              <p className="text-sm text-muted-foreground">{stat.label}</p>
-            </Card>
-          ))}
-        </section>
+      
 
         {/* Mission & Vision */}
         <section className="py-12 space-y-8">
@@ -88,20 +87,16 @@ export default function AboutPage() {
               <h2 className="text-2xl font-bold mb-4">Our Mission</h2>
               <p className="text-muted-foreground leading-relaxed">
                 To revolutionize the real estate industry by providing a transparent,
-                user-friendly platform that connects property buyers, sellers, and
-                investors with verified listings and exceptional service. We're
-                committed to eliminating barriers to property discovery and enabling
-                informed decisions.
+                user-friendly platform that connects property buyers and sellers 
+                with verified listings and exceptional service. We're committed to 
+                eliminating barriers to property discovery and enabling informed decisions.
               </p>
             </Card>
 
             <Card className="p-8 bg-gradient-to-br from-accent/5 to-primary/5 border-accent/20">
               <h2 className="text-2xl font-bold mb-4">Our Vision</h2>
               <p className="text-muted-foreground leading-relaxed">
-                To become the leading digital real estate platform in Africa, trusted
-                by millions for their property needs. We envision a future where finding
-                the perfect property is simple, transparent, and accessible to everyone,
-                powered by technology and human expertise.
+                At Abzy Properties, our vision is to redefine real estate by delivering seamless, easy, and stress-free experiences for every client. We are committed to making property ownership simple, accessible and fulfilling.
               </p>
             </Card>
           </div>
@@ -181,15 +176,37 @@ export default function AboutPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-center h-48 bg-muted rounded-lg border-2 border-border">
-                <div className="text-center">
-                  <Award className="w-16 h-16 text-primary mx-auto mb-4" />
-                  <p className="font-semibold text-sm">CAC Certificate</p>
-                  <p className="text-xs text-muted-foreground">
-                    Verified & Licensed
-                  </p>
-                </div>
-              </div>
+              <div className="rounded-xl overflow-hidden border bg-muted">
+
+  {cac?.document_url ? (
+  <div className="flex justify-center bg-muted rounded-xl p-6">
+  <Image
+    src={cac.document_url}
+    alt="CAC Registration Certificate"
+    width={700}
+    height={1000}
+    className="max-w-full h-auto object-contain"
+  />
+</div>
+  ) : (
+
+    <div className="h-72 flex flex-col items-center justify-center">
+
+      <Award className="w-16 h-16 text-primary mb-4" />
+
+      <p className="font-semibold">
+        CAC Certificate
+      </p>
+
+      <p className="text-sm text-muted-foreground">
+        Certificate not uploaded yet
+      </p>
+
+    </div>
+
+  )}
+
+</div>
             </div>
           </Card>
         </section>
@@ -230,19 +247,13 @@ export default function AboutPage() {
               <Card className="p-6">
                 <Phone className="w-8 h-8 text-primary mb-4" />
                 <h3 className="font-semibold mb-2">Phone</h3>
-                <p className="text-muted-foreground">+234 (0) 701 234 5678</p>
-              </Card>
-
-              <Card className="p-6">
-                <Mail className="w-8 h-8 text-primary mb-4" />
-                <h3 className="font-semibold mb-2">Email</h3>
-                <p className="text-muted-foreground">hello@abzyproperties.com</p>
+                <p className="text-muted-foreground">+234 (0) 706 182 8549</p>
               </Card>
 
               <Card className="p-6">
                 <MapPin className="w-8 h-8 text-primary mb-4" />
                 <h3 className="font-semibold mb-2">Location</h3>
-                <p className="text-muted-foreground">Abuja, Nigeria</p>
+                <p className="text-muted-foreground">No 105 Chinyeaka ohaa Street Wuye, Abuja.</p>
               </Card>
             </div>
 
