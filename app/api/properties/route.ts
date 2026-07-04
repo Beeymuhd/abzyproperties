@@ -117,12 +117,18 @@ export async function PUT(request: Request) {
   try {
     const { id, verified, } = await request.json()
 
-    const { error } = await supabaseAdmin
-      .from('properties')
-      .update({
-        verified,
-      })
-      .eq('id', id)
+const updateData: any = {
+  verified,
+}
+
+if (verified) {
+  updateData.status = 'active'
+}
+
+const { error } = await supabaseAdmin
+  .from('properties')
+  .update(updateData)
+  .eq('id', id)
 
     if (error) {
       return NextResponse.json(

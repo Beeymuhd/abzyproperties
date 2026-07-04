@@ -22,12 +22,13 @@ export const metadata = {
     'Find verified houses and lands properties across Nigeria.',
 }
 
+export const dynamic = 'force-dynamic'
+
 export default async function HomePage() {
   const { data: featuredListings } = await supabaseAdmin
   .from('properties')
   .select('*')
   .eq('verified', true)
-  .eq('status', 'active')
   .order('created_at', { ascending: false })
   .limit(4)
 
@@ -47,7 +48,6 @@ const { data: testimonials } = await supabaseAdmin
   .from('properties')
   .select('*', { count: 'exact', head: true })
   .eq('verified', true)
-  .eq('status', 'active')
 
 const { count: verifiedCount } = await supabaseAdmin
   .from('properties')
